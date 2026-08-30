@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>My Appointments</title>
+</head>
+<body>
+<h1 id="page-title">My Appointments</h1>
+
+<a id="slots-link" th:href="@{/slots}">Book another slot</a>
+
+<table id="appointments-table">
+    <tbody>
+    <tr th:each="appt : ${appointments}" th:id="'appointment-row-' + ${appt.id}">
+        <td th:text="${#temporals.format(appt.slot.startTime, 'yyyy-MM-dd HH:mm')}"></td>
+        <td th:id="'appointment-status-' + ${appt.id}" th:text="${appt.status}"></td>
+        <td th:id="'appointment-fee-' + ${appt.id}" th:text="${appt.feeAmount}"></td>
+        <td>
+            <form th:if="${appt.status.name() == 'REQUESTED'}" method="post"
+                  th:action="@{/appointments/{id}/confirm(id=${appt.id})}">
+                <button type="submit" th:id="'confirm-button-' + ${appt.id}">Confirm</button>
+            </form>
+            <form th:if="${appt.status.name() == 'REQUESTED' or appt.status.name() == 'CONFIRMED'}" method="post"
+                  th:action="@{/appointments/{id}/cancel(id=${appt.id})}">
+                <button type="submit" th:id="'cancel-button-' + ${appt.id}">Cancel</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<p id="no-appointments-message" th:if="${appointments.isEmpty()}">You have no appointments.</p>
+</body>
+</html>

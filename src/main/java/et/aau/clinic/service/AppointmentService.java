@@ -65,6 +65,14 @@ public class AppointmentService {
                 .toList();
     }
 
+    public Slot getSlot(Long slotId) {
+        return slotRepository.findById(slotId).orElseThrow();
+    }
+
+    public Appointment getAppointment(Long appointmentId) {
+        return appointmentRepository.findById(appointmentId).orElseThrow();
+    }
+
     public List<Appointment> listAppointmentsForPatient(Long patientId) {
         Patient patient = patientRepository.findById(patientId).orElseThrow();
         return appointmentRepository.findByPatientOrderByRequestedAtDesc(patient);

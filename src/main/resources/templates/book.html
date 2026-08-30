@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Book Appointment</title>
+</head>
+<body>
+<h1 id="page-title">Confirm Booking</h1>
+
+<p id="booking-error" th:if="${error}" th:text="${error}"></p>
+
+<p>Slot time:
+    <span id="slot-time" th:text="${#temporals.format(slot.startTime, 'yyyy-MM-dd HH:mm')}"></span>
+</p>
+
+<form id="book-form" method="post" th:action="@{/book}">
+    <input type="hidden" id="slot-id" name="slotId" th:value="${slot.id}"/>
+    <button type="submit" id="book-submit">Confirm Booking</button>
+</form>
+
+<a id="back-to-slots-link" th:href="@{/slots}">Back to slots</a>
+</body>
+</html>

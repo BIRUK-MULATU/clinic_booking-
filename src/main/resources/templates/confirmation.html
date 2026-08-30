@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Booking Confirmed</title>
+</head>
+<body>
+<h1 id="page-title">Booking Requested</h1>
+
+<p>Status: <span id="confirmation-status" th:text="${appointment.status}"></span></p>
+<p>Slot: <span id="confirmation-slot-time"
+               th:text="${#temporals.format(appointment.slot.startTime, 'yyyy-MM-dd HH:mm')}"></span></p>
+<p>Category: <span id="confirmation-fee-category" th:text="${appointment.feeCategory}"></span></p>
+<p>Fee: <span id="confirmation-fee-amount" th:text="${appointment.feeAmount}"></span> ETB</p>
+
+<a id="my-appointments-link" th:href="@{/my-appointments}">My appointments</a>
+</body>
+</html>
