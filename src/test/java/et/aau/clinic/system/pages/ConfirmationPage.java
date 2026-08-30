@@ -1,28 +1,23 @@
 package et.aau.clinic.system.pages;
 
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 
-public class ConfirmationPage {
-
-    private final WebDriver driver;
-    private final String baseUrl;
+public class ConfirmationPage extends AbstractPage {
 
     public ConfirmationPage(WebDriver driver, String baseUrl) {
-        this.driver = driver;
-        this.baseUrl = baseUrl;
+        super(driver, baseUrl);
     }
 
     public String getStatus() {
-        return driver.findElement(By.id("confirmation-status")).getText();
+        return find("confirmation-status").getText();
     }
 
     public String getFeeCategory() {
-        return driver.findElement(By.id("confirmation-fee-category")).getText();
+        return find("confirmation-fee-category").getText();
     }
 
     public String getFeeAmount() {
-        return driver.findElement(By.id("confirmation-fee-amount")).getText();
+        return find("confirmation-fee-amount").getText();
     }
 
     /** The appointment id, read from the current /confirmation/{id} URL. */
@@ -32,7 +27,7 @@ public class ConfirmationPage {
     }
 
     public MyAppointmentsPage goToMyAppointments() {
-        driver.findElement(By.id("my-appointments-link")).click();
+        find("my-appointments-link").click();
         return new MyAppointmentsPage(driver, baseUrl);
     }
 }

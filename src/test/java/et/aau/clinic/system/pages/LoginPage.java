@@ -1,6 +1,5 @@
 package et.aau.clinic.system.pages;
 
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 
 /**
@@ -8,14 +7,10 @@ import org.openqa.selenium.WebDriver;
  * login.html - no raw driver.findElement calls are allowed in the
  * test classes themselves (CLAUDE.md), only inside page objects.
  */
-public class LoginPage {
-
-    private final WebDriver driver;
-    private final String baseUrl;
+public class LoginPage extends AbstractPage {
 
     public LoginPage(WebDriver driver, String baseUrl) {
-        this.driver = driver;
-        this.baseUrl = baseUrl;
+        super(driver, baseUrl);
     }
 
     public LoginPage open() {
@@ -33,12 +28,12 @@ public class LoginPage {
     }
 
     public String getErrorMessage() {
-        return driver.findElement(By.id("login-error")).getText();
+        return find("login-error").getText();
     }
 
     private void submit(String username, String password) {
-        driver.findElement(By.id("username")).sendKeys(username);
-        driver.findElement(By.id("password")).sendKeys(password);
-        driver.findElement(By.id("login-submit")).click();
+        find("username").sendKeys(username);
+        find("password").sendKeys(password);
+        find("login-submit").click();
     }
 }

@@ -123,3 +123,66 @@ Reproduced on the `regression-demo` branch
 ([failing run](https://github.com/BIRUK-MULATU/clinic_booking-/actions/runs/33305001970)),
 fixed in the same commit that reverted the regression
 ([passing run](https://github.com/BIRUK-MULATU/clinic_booking-/actions/runs/33305212152)).
+
+---
+
+## DEF-003: Selenium system test is flaky under constrained CPU (Jenkins-in-Docker) - NoSuchElementException right after a form submit
+
+**Found:** verifying the Jenkins pipeline actually runs end to end (Part E /
+Jenkins requirement), first real build against `docker/jenkins/`.
+**Component:** `src/test/java/et/aau/clinic/system/pages/*.java` (Page
+Objects).
+**Severity:** Medium (a real, reproducible test-suite defect - not the
+application, but it would fail a real CI run unpredictably)
+**Priority:** High (a flaky system test is worse than a slow one - fails
+intermittently, hard to trust)
+**Status:** Closed
+
+### Steps to reproduce
+
+1. Run the full journey (`BookingJourneyIT`) in an environment with limited
+   CPU relative to a GitHub-hosted runner, e.g. the Jenkins Docker container
+   used for `docker/jenkins/` on a shared host.
+2. `ConfirmationPage.getStatus()` (and other page-object accessors) called
+   `driver.findElement(...)` directly, immediately after a `.click()` that
+   triggers a server-side redirect.
+
+### Expected
+
+The system test passes reliably regardless of how fast the server happens
+to respond.
+
+### Actual
+
+```
+org.openqa.selenium.NoSuchElementException: no such element: Unable to
+locate element: {"method":"css selector","selector":"#confirmation-status"}
+```
+
+The same test passes reliably in GitHub Actions (hosted runner, more CPU)
+but failed the first time it ran inside the Jenkins container.
+
+### Root cause
+
+Selenium's WebDriver spec only guarantees that `click()` blocks until a
+triggered navigation *starts*, not until the resulting page has finished
+rendering. The page objects called `driver.findElement()` immediately after
+a click, implicitly assuming the next page was already fully rendered. That
+assumption silently held on a fast, lightly-loaded GitHub-hosted runner and
+broke under the Docker container's tighter CPU budget - a race condition,
+not a fluke.
+
+### Fix
+
+Added `AbstractPage`, a common base class for all five page objects, with a
+`find(...)` helper backed by `WebDriverWait` + `ExpectedConditions.presenceOfElementLocated`
+(10s timeout). Every locator call in every page object now waits for its
+target element instead of assuming it is already there. No behaviour change
+on the fast path - the wait returns immediately once the element exists.
+
+### Verification
+
+Reproduced in the Jenkins container (build #3 of the `clinic-booking-pipeline`
+job), fixed and verified with `mvn clean verify` locally, then re-run in the
+same Jenkins container (build #4) to confirm the fix under the same
+constrained conditions that first exposed the bug.
