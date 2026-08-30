@@ -19,6 +19,14 @@ RUN apt-get update \
 
 USER jenkins
 
+# The base image ships almost no plugins - without this, "New Item"
+# doesn't even offer a Pipeline job type. workflow-aggregator is the
+# whole Pipeline suite the Jenkinsfile needs; git lets a Pipeline job
+# check out from GitHub; junit publishes the Surefire/Failsafe XML
+# reports the Jenkinsfile's post block reads.
+COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
+RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
+
 # Lab-only convenience: skip the first-run setup wizard. Never do this
 # for a Jenkins controller that is actually exposed to anyone else.
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
