@@ -22,7 +22,7 @@ public final class FeeCalculator {
         if (age < 0 || age > 120) {
             throw new IllegalArgumentException("Age must be between 0 and 120, was " + age);
         }
-        if (age <= 17) {
+        if (age <= 16) {
             return new Fee(FeeCategory.CHILD, CHILD_FEE);
         }
         if (age <= 64) {
