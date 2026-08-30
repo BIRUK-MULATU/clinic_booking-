@@ -65,3 +65,61 @@ collision instead by using a distinct seeded username per test method.
 
 `mvn clean verify` passes with all `AppointmentServiceIT` and
 `AppointmentJourneyIT` methods green, run repeatedly.
+
+---
+
+## DEF-002: CI coverage-summary step fails with a confusing secondary error whenever the build already failed
+
+**Found:** Phase 8/E, while running the deliberate regression demo (see
+`docs/regression-demo.md`) - the boundary-value test correctly caught the
+regression, but a second, unrelated CI failure appeared alongside it.
+**Component:** `.github/workflows/ci.yml`, "Publish coverage summary" step.
+**Severity:** Low (cosmetic/noise in CI output, does not affect the app or
+the test results themselves)
+**Priority:** Medium (worth fixing - a real failure's log gets buried under
+an unrelated one, making the CI output harder to read)
+**Status:** Closed
+
+### Steps to reproduce
+
+1. Break a test in `et.aau.clinic.core` (e.g. shift a fee boundary) so
+   `mvn clean verify` fails during the unit-test phase.
+2. Push to a branch and let the GitHub Actions `CI` workflow run.
+
+### Expected
+
+Only the actual test failure is reported; the coverage-summary step is
+skipped or clearly reports "no coverage available", since there is nothing
+to summarise.
+
+### Actual
+
+The "Publish coverage summary" step (which runs unconditionally via
+`if: always()`) also fails:
+
+```
+awk: fatal: cannot open file `target/site/jacoco/jacoco.csv' for reading: No such file or directory
+Error: Process completed with exit code 2.
+```
+
+### Root cause
+
+`jacoco.csv` is produced by the `jacoco-maven-plugin:report` goal, which is
+bound to Maven's `verify` phase. Maven's default `fail-fast` behaviour stops
+the build at the first failing phase, so when unit tests fail in the earlier
+`test` phase, `verify` never runs and the CSV is never written - but the
+summary step assumed it always would be.
+
+### Fix
+
+Added a file-existence check at the top of the step: if `jacoco.csv` is
+missing, write a one-line "no coverage report was generated" note to the job
+summary and exit successfully instead of trying to parse a file that was
+never created.
+
+### Verification
+
+Reproduced on the `regression-demo` branch
+([failing run](https://github.com/BIRUK-MULATU/clinic_booking-/actions/runs/33305001970)),
+fixed in the same commit that reverted the regression
+([passing run](https://github.com/BIRUK-MULATU/clinic_booking-/actions/runs/33305212152)).
