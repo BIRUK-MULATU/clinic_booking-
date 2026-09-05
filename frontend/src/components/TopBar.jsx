@@ -27,6 +27,12 @@ export default function TopBar() {
           <NavLink to="/my-appointments" className={({ isActive }) => (isActive ? "active" : "")}>
             My appointments
           </NavLink>
+          <NavLink to="/doctors" className={({ isActive }) => (isActive ? "active" : "")}>
+            Doctors
+          </NavLink>
+          <NavLink to="/queue" className={({ isActive }) => (isActive ? "active" : "")}>
+            Queue
+          </NavLink>
           <span className="user-chip">
             <span className="avatar">{initial}</span>
             {patient.name}

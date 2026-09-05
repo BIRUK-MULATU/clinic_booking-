@@ -60,6 +60,11 @@ export default function SlotsPage() {
                 <div className="slot-time" id={`slot-time-${slot.id}`}>
                   <span className="slot-date">{dateLabel}</span>
                   <span className="slot-clock">{timeLabel}</span>
+                  {slot.doctor && (
+                    <span className="slot-clock" id={`slot-doctor-${slot.id}`}>
+                      {slot.doctor.name} · {slot.doctor.specialty}
+                    </span>
+                  )}
                 </div>
                 <button
                   className="btn btn-secondary btn-sm"

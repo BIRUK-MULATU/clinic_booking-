@@ -6,6 +6,9 @@ import SlotsPage from "./pages/SlotsPage";
 import BookPage from "./pages/BookPage";
 import ConfirmationPage from "./pages/ConfirmationPage";
 import MyAppointmentsPage from "./pages/MyAppointmentsPage";
+import DoctorsPage from "./pages/DoctorsPage";
+import AvailabilityPage from "./pages/AvailabilityPage";
+import QueuePage from "./pages/QueuePage";
 
 export default function App() {
   return (
@@ -43,6 +46,30 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MyAppointmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctors"
+          element={
+            <ProtectedRoute>
+              <DoctorsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctors/:doctorId/availability"
+          element={
+            <ProtectedRoute>
+              <AvailabilityPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/queue"
+          element={
+            <ProtectedRoute>
+              <QueuePage />
             </ProtectedRoute>
           }
         />

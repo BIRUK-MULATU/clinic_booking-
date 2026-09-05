@@ -54,7 +54,10 @@ export default function MyAppointmentsPage() {
         {appointments?.map((appt) => {
           const { raw } = formatSlot(appt.slotStartTime);
           const canConfirm = appt.status === "REQUESTED";
-          const canCancel = appt.status === "REQUESTED" || appt.status === "CONFIRMED";
+          const canCheckIn = appt.status === "CONFIRMED";
+          const canCancel =
+            appt.status === "REQUESTED" || appt.status === "CONFIRMED" || appt.status === "WAITLISTED";
+          const cancelLabel = appt.status === "WAITLISTED" ? "Leave Waitlist" : "Cancel";
           return (
             <div className="card appointment-card" id={`appointment-row-${appt.id}`} key={appt.id}>
               <div className="appointment-info">
@@ -78,6 +81,16 @@ export default function MyAppointmentsPage() {
                     Confirm
                   </button>
                 )}
+                {canCheckIn && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    id={`check-in-button-${appt.id}`}
+                    disabled={busyId === appt.id}
+                    onClick={() => act(api.checkIn, appt.id)}
+                  >
+                    Check In
+                  </button>
+                )}
                 {canCancel && (
                   <button
                     className="btn btn-danger btn-sm"
@@ -85,7 +98,7 @@ export default function MyAppointmentsPage() {
                     disabled={busyId === appt.id}
                     onClick={() => act(api.cancel, appt.id)}
                   >
-                    Cancel
+                    {cancelLabel}
                   </button>
                 )}
               </div>

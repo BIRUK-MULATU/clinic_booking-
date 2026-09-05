@@ -28,6 +28,23 @@ export const api = {
   appointment: (id) => request(`/appointments/${id}`),
   confirm: (id) => request(`/appointments/${id}/confirm`, { method: "POST" }),
   cancel: (id) => request(`/appointments/${id}/cancel`, { method: "POST" }),
+  joinWaitlist: (slotId) => request("/waitlist", { method: "POST", body: JSON.stringify({ slotId }) }),
+  checkIn: (appointmentId) => request(`/appointments/${appointmentId}/check-in`, { method: "POST" }),
+
+  // Hospital-expansion Phase A/B: doctors and their availability.
+  doctors: () => request("/doctors"),
+  doctorAvailability: (doctorId) => request(`/doctors/${doctorId}/availability`),
+  addAvailabilityRule: (doctorId, rule) =>
+    request(`/doctors/${doctorId}/availability`, { method: "POST", body: JSON.stringify(rule) }),
+  doctorExceptions: (doctorId) => request(`/doctors/${doctorId}/exceptions`),
+  addException: (doctorId, date) =>
+    request(`/doctors/${doctorId}/exceptions`, { method: "POST", body: JSON.stringify({ date }) }),
+
+  // Hospital-expansion Phase D: the front-desk queue.
+  queue: () => request("/queue"),
+  callNext: (entryId) => request(`/queue/${entryId}/call`, { method: "POST" }),
+  startConsultation: (entryId) => request(`/queue/${entryId}/start-consultation`, { method: "POST" }),
+  completeConsultation: (entryId) => request(`/queue/${entryId}/complete`, { method: "POST" }),
 };
 
 export const REJECTION_MESSAGES = {

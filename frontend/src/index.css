@@ -449,6 +449,27 @@ button {
   color: var(--danger);
 }
 
+.status-WAITLISTED,
+.status-WAITING {
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+.status-CALLED {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.status-IN_CONSULTATION {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.status-DONE {
+  background: var(--success-light);
+  color: var(--success);
+}
+
 .confirmation-hero {
   text-align: center;
   padding: 12px 0 20px;

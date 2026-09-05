@@ -100,6 +100,27 @@ public class AppointmentService {
         return new BookingOutcome(decision, saved);
     }
 
+    /**
+     * Hospital-expansion Phase C: joins the waitlist for a slot that's currently taken.
+     * Entered directly in WAITLISTED, the same way requestBooking() creates fresh
+     * appointments directly in REQUESTED - neither is a transition, both are the initial
+     * state of a new row. No eligibility check here beyond the slot/patient existing:
+     * EXPANSION.md doesn't specify one, and BookingPolicy's C1/C2/C3 govern booking an
+     * available slot, not queuing for one that's already gone.
+     */
+    public Appointment joinWaitlist(Long patientId, Long slotId) {
+        Patient patient = patientRepository.findById(patientId).orElseThrow();
+        Slot slot = slotRepository.findById(slotId).orElseThrow();
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        int age = Period.between(patient.getDateOfBirth(), now.toLocalDate()).getYears();
+        Fee fee = FeeCalculator.calculate(age);
+
+        Appointment appointment = new Appointment(
+                patient, slot, AppointmentStatus.WAITLISTED, fee.category(), fee.amount(), now);
+        return appointmentRepository.save(appointment);
+    }
+
     public Appointment confirm(Long appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId).orElseThrow();
         appointment.setStatus(AppointmentStateMachine.transition(appointment.getStatus(), AppointmentEvent.CONFIRM));
@@ -131,8 +152,25 @@ public class AppointmentService {
             BigDecimal fee = AppointmentStateMachine.lateCancellationFee(
                     now, appointment.getSlot().getStartTime(), appointment.getFeeAmount());
             appointment.setCancellationFee(fee);
+
+            promoteNextWaitlisted(appointment.getSlot());
         }
 
         return appointmentRepository.save(appointment);
+    }
+
+    /**
+     * Hospital-expansion Phase C, now wired: when a CONFIRMED appointment is cancelled,
+     * the slot it held frees up, so the longest-waiting WAITLISTED appointment for that
+     * same slot (if any) is promoted to REQUESTED via the transition that already exists
+     * for exactly this purpose.
+     */
+    private void promoteNextWaitlisted(Slot slot) {
+        appointmentRepository.findFirstBySlotAndStatusOrderByRequestedAtAsc(slot, AppointmentStatus.WAITLISTED)
+                .ifPresent(waitlisted -> {
+                    waitlisted.setStatus(
+                            AppointmentStateMachine.transition(AppointmentStatus.WAITLISTED, AppointmentEvent.PROMOTE));
+                    appointmentRepository.save(waitlisted);
+                });
     }
 }
