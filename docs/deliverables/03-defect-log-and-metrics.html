@@ -149,6 +149,11 @@ locate element: {"method":"css selector","selector":"#confirmation-status"}</pre
   <code>clinic-booking-pipeline</code>), fixed and verified locally, then re-run in the same
   container (build #4: <code>Finished: SUCCESS</code>) to confirm under the same constrained
   conditions that first exposed it.</p>
+  <p>The fix reduces the failure rate rather than proving the race eliminated - an explicit wait
+  shortens the window, it does not remove it. As a data point: the same failure family recurred
+  once on 2026-09-05 on a plain local <code>mvn clean verify</code> rerun under heavier-than-usual
+  load, and was gone on immediate retry. Treated as mitigated, not closed against recurrence under
+  sufficiently adverse timing.</p>
 </div>
 
 <h2>2. Metrics</h2>
@@ -192,13 +197,20 @@ locate element: {"method":"css selector","selector":"#confirmation-status"}</pre
   <tr>
     <td>Branch coverage — whole application (excluding <code>domain</code>, <code>config</code>,
         <code>ClinicApplication</code>, per the JaCoCo exclusions in <code>pom.xml</code>)</td>
-    <td><strong>100%</strong> (48/48 branches); instruction coverage ≈90%, line coverage ≈89%</td>
-    <td>The gate only requires <code>core/</code>, but the integration and system suites happen to
-        exercise every branch in <code>web/</code> and <code>service/</code> too. The instruction/line
-        gap (some methods in <code>AppointmentService</code> and the controllers) is unreached
-        straight-line code such as unused getters and a couple of defensive branches in
-        <code>GlobalExceptionHandler</code> that no current test provokes — see §3 of the test
-        summary report for what is deliberately left uncovered and why.</td>
+    <td><strong>70.6%</strong> (48/68 branches); instruction coverage 60.5% (682/1128), line
+        coverage 66.1% (158/239) — recomputed from a fresh <code>mvn clean verify</code> run on
+        2026-09-05, analysing 27 classes</td>
+    <td>The gate only requires <code>core/</code>, which remains untouched at 100%. The drop in
+        this whole-application row from an earlier 100%/≈90%/≈89% is entirely explained by the
+        JSON API added under <code>web.api</code> for the separate React frontend
+        (<code>BookingApiController</code>, <code>SlotApiController</code>,
+        <code>AppointmentApiController</code>, <code>AuthApiController</code>, and their DTOs):
+        that package has no dedicated tests, so every one of its 20 branches and most of its
+        instructions are unexercised. It is additive, ungraded code (see
+        <code>README.md</code>), not a regression in the graded application's own coverage — the
+        pre-existing <code>web/</code> and <code>service/</code> packages this row previously
+        described are unchanged and still fully branch-covered. See §3 of the test summary report
+        for what is deliberately left uncovered and why.</td>
   </tr>
 </table>
 

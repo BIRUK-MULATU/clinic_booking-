@@ -12,7 +12,7 @@ fix relative to other work.
 ## DEF-001: Integration tests fail intermittently with a unique-constraint violation
 
 **Found:** Phase 6, while first running `AppointmentServiceIT`.
-**Component:** `src/test/java/et/aau/clinic/integration/AppointmentServiceIT.java`
+**Component:** `backend/src/test/java/et/aau/clinic/integration/AppointmentServiceIT.java`
 **Severity:** Medium (test suite reliability, not a production defect)
 **Priority:** High (blocked `mvn verify` from passing at all)
 **Status:** Closed
@@ -130,7 +130,7 @@ fixed in the same commit that reverted the regression
 
 **Found:** verifying the Jenkins pipeline actually runs end to end (Part E /
 Jenkins requirement), first real build against `docker/jenkins/`.
-**Component:** `src/test/java/et/aau/clinic/system/pages/*.java` (Page
+**Component:** `backend/src/test/java/et/aau/clinic/system/pages/*.java` (Page
 Objects).
 **Severity:** Medium (a real, reproducible test-suite defect - not the
 application, but it would fail a real CI run unpredictably)
@@ -186,3 +186,12 @@ Reproduced in the Jenkins container (build #3 of the `clinic-booking-pipeline`
 job), fixed and verified with `mvn clean verify` locally, then re-run in the
 same Jenkins container (build #4) to confirm the fix under the same
 constrained conditions that first exposed the bug.
+
+The fix reduces the failure rate - it does not prove the underlying race is
+eliminated, since an explicit wait shortens the window rather than removing
+it. As a data point: the same failure family (`BookingJourneyIT`, status
+assertion mismatch right after a redirect) recurred once on 2026-09-05, on a
+plain local `mvn clean verify` rerun on a machine under heavier load than
+usual (backend, frontend dev server, and browser sessions running
+concurrently), and was gone on immediate retry. Treat this defect as
+mitigated, not closed against recurrence under sufficiently adverse timing.

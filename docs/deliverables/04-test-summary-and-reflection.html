@@ -97,6 +97,10 @@ without a container or browser, with progressively fewer, slower, broader-scope 
       are the reason whole-application instruction/line coverage (~90%/~89%) sits below the 100%
       branch figure on <code>core</code>; none of this uncovered code sits inside the three graded
       business rules.</li>
+  <li><strong>The JSON API added under <code>backend/.../web/api</code></strong> for the separate
+      React frontend (<code>frontend/</code>) is additive and untested — it delegates to the same
+      <code>AppointmentService</code> the graded suite already covers, but the controllers and DTOs
+      themselves have no dedicated tests of their own (see <code>README.md</code>).</li>
 </ul>
 
 <h2>3. Results against exit criteria</h2>
