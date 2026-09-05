@@ -24,6 +24,7 @@ class BookingPolicyTest {
 
     private static final LocalDateTime SLOT_START = LocalDateTime.of(2026, 1, 10, 14, 0);
 
+    // TC-B01 - Decision table Rule R1 (C1=F, C2/C3 don't-care shown true here).
     @Test
     void decision_slotUnavailable_withGoodBalanceAndNotice_rejectsWithSlotUnavailable() {
         BookingDecision decision = BookingPolicy.evaluate(
@@ -32,6 +33,7 @@ class BookingPolicyTest {
         assertRejected(decision, RejectionReason.SLOT_UNAVAILABLE);
     }
 
+    // TC-B02 - Decision table Rule R1 (C1=F) with C2/C3 don't-care shown false this time.
     @Test
     void decision_slotUnavailable_withBadBalanceAndInsufficientNotice_stillRejectsWithSlotUnavailable() {
         // Proves C1 outranks C2 and C3: both of those are false too, but
@@ -42,6 +44,7 @@ class BookingPolicyTest {
         assertRejected(decision, RejectionReason.SLOT_UNAVAILABLE);
     }
 
+    // TC-B03 - Decision table Rule R2 (C1=T, C2=F, C3 don't-care shown true here).
     @Test
     void decision_outstandingBalance_withSufficientNotice_rejectsWithOutstandingBalance() {
         BookingDecision decision = BookingPolicy.evaluate(
@@ -50,6 +53,7 @@ class BookingPolicyTest {
         assertRejected(decision, RejectionReason.OUTSTANDING_BALANCE);
     }
 
+    // TC-B04 - Decision table Rule R2 (C1=T, C2=F) with C3 don't-care shown false this time.
     @Test
     void decision_outstandingBalance_withInsufficientNotice_stillRejectsWithOutstandingBalance() {
         // Proves C2 outranks C3.
@@ -59,6 +63,7 @@ class BookingPolicyTest {
         assertRejected(decision, RejectionReason.OUTSTANDING_BALANCE);
     }
 
+    // TC-B05 - Decision table Rule R3 (C1=T, C2=T, C3=F).
     @Test
     void decision_insufficientNotice_rejectsWithInsufficientNotice() {
         BookingDecision decision = BookingPolicy.evaluate(
@@ -67,6 +72,7 @@ class BookingPolicyTest {
         assertRejected(decision, RejectionReason.INSUFFICIENT_NOTICE);
     }
 
+    // TC-B06 - Decision table Rule R4 (C1=T, C2=T, C3=T) - the sole approve row.
     @Test
     void decision_allConditionsTrue_approves() {
         BookingDecision decision = BookingPolicy.evaluate(
@@ -76,6 +82,7 @@ class BookingPolicyTest {
         assertThat(decision.getReason()).isNull();
     }
 
+    // TC-B07 - BVA on C3: lower boundary of "sufficient notice" (exactly 2h00m), inclusive.
     @Test
     void notice_exactlyTwoHoursBeforeSlot_isSufficient_approves() {
         BookingDecision decision = BookingPolicy.evaluate(
@@ -84,6 +91,7 @@ class BookingPolicyTest {
         assertThat(decision.isApproved()).isTrue();
     }
 
+    // TC-B08 - BVA on C3: just below the boundary (1h59m), the failing side of the same edge.
     @Test
     void notice_oneMinuteLessThanTwoHours_isInsufficient_rejects() {
         BookingDecision decision = BookingPolicy.evaluate(
@@ -92,6 +100,7 @@ class BookingPolicyTest {
         assertRejected(decision, RejectionReason.INSUFFICIENT_NOTICE);
     }
 
+    // TC-B09 - BVA on C3: interior value well above the boundary (10h).
     @Test
     void notice_wellOverTwoHours_isSufficient_approves() {
         BookingDecision decision = BookingPolicy.evaluate(

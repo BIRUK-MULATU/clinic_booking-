@@ -34,31 +34,38 @@ class AppointmentStateMachineTest {
 
     private static final LocalDateTime SLOT_START = LocalDateTime.of(2026, 1, 10, 14, 0);
 
+    // TC-S01 - State transition table: REQUESTED --confirm--> CONFIRMED (valid).
     @Test
     void transition_requestedConfirm_movesToConfirmed() {
         assertThat(AppointmentStateMachine.transition(REQUESTED, CONFIRM)).isEqualTo(CONFIRMED);
     }
 
+    // TC-S02 - State transition table: REQUESTED --cancel--> CANCELLED (valid).
     @Test
     void transition_requestedCancel_movesToCancelled() {
         assertThat(AppointmentStateMachine.transition(REQUESTED, CANCEL)).isEqualTo(CANCELLED);
     }
 
+    // TC-S03 - State transition table: CONFIRMED --attend--> ATTENDED (valid).
     @Test
     void transition_confirmedAttend_movesToAttended() {
         assertThat(AppointmentStateMachine.transition(CONFIRMED, ATTEND)).isEqualTo(ATTENDED);
     }
 
+    // TC-S04 - State transition table: CONFIRMED --cancel--> CANCELLED (valid).
     @Test
     void transition_confirmedCancel_movesToCancelled() {
         assertThat(AppointmentStateMachine.transition(CONFIRMED, CANCEL)).isEqualTo(CANCELLED);
     }
 
+    // TC-S05 - State transition table: CONFIRMED --markNoShow--> NO_SHOW (valid).
     @Test
     void transition_confirmedMarkNoShow_movesToNoShow() {
         assertThat(AppointmentStateMachine.transition(CONFIRMED, MARK_NO_SHOW)).isEqualTo(NO_SHOW);
     }
 
+    // State transition table: covers all 15 invalid (state, event) pairs - the full grid
+    // (20 pairs) minus the 5 valid transitions TC-S01-TC-S05 cover above.
     @ParameterizedTest(name = "{index}: {0} + {1} is invalid")
     @MethodSource("invalidStateEventPairs")
     void transition_invalidPair_throwsIllegalStateException(AppointmentStatus state, AppointmentEvent event) {
@@ -67,6 +74,7 @@ class AppointmentStateMachineTest {
     }
 
     /**
+     * State transition table: data source for the 15 invalid pairs above.
      * All 20 state/event pairs minus the 5 valid ones from CLAUDE.md's
      * table, generated rather than hand-listed so the count (15) is
      * enforced by the grid itself, not by hand-copying.
@@ -89,11 +97,15 @@ class AppointmentStateMachineTest {
                         .map(event -> Arguments.of(state, event)));
     }
 
+    // Meta-check on the state transition table itself, not a technique-derived case: asserts
+    // the generated invalid set has exactly 15 members (20 pairs - the 5 valid transitions),
+    // so a future edit to the grid can't silently drop or duplicate a pair.
     @Test
     void invalidStateEventPairs_containsExactlyFifteenPairs() {
         assertThat(invalidStateEventPairs().count()).isEqualTo(15);
     }
 
+    // TC-S06 - BVA on Rule 3b's 24h guard: just inside the late window (23h59m).
     @Test
     void lateCancellationFee_atTwentyThreeHours59Minutes_chargesHalfFee() {
         LocalDateTime now = SLOT_START.minusHours(23).minusMinutes(59);
@@ -103,6 +115,7 @@ class AppointmentStateMachineTest {
         assertThat(fee).isEqualByComparingTo(new BigDecimal("125.0"));
     }
 
+    // TC-S07 - BVA on Rule 3b's 24h guard: the boundary itself (exactly 24h00m, free per "less than").
     @Test
     void lateCancellationFee_atExactlyTwentyFourHours_isFree() {
         LocalDateTime now = SLOT_START.minusHours(24);
@@ -112,6 +125,7 @@ class AppointmentStateMachineTest {
         assertThat(fee).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
+    // TC-S08 - BVA on Rule 3b's 24h guard: just outside the late window (24h01m).
     @Test
     void lateCancellationFee_atTwentyFourHoursOneMinute_isFree() {
         LocalDateTime now = SLOT_START.minusHours(24).minusMinutes(1);
