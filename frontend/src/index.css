@@ -68,6 +68,8 @@ button {
   padding: 14px 28px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
 }
 
 .brand {
@@ -150,6 +152,8 @@ button {
   max-width: 880px;
   margin: 0 auto;
   padding: 36px 24px 60px;
+  position: relative;
+  z-index: 1;
 }
 
 .page-header {

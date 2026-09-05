@@ -12,6 +12,7 @@ import QueuePage from "./pages/QueuePage";
 import VisitRecordPage from "./pages/VisitRecordPage";
 import PatientsPage from "./pages/PatientsPage";
 import ManageSlotsPage from "./pages/ManageSlotsPage";
+import Watermark from "./components/Watermark";
 import { useAuth } from "./context/AuthContext";
 
 function HomeRedirect() {
@@ -20,8 +21,11 @@ function HomeRedirect() {
 }
 
 export default function App() {
+  const { patient } = useAuth();
+
   return (
     <div className="app-shell">
+      {patient?.role === "PATIENT" && <Watermark />}
       <TopBar />
       <Routes>
         <Route path="/" element={<HomeRedirect />} />
