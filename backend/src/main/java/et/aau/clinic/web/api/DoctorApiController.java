@@ -26,13 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Hospital-expansion Phases A/B, surfaced through the JSON API for the
- * decorated frontend. Same session-based auth check as the rest of
- * web/api - no separate admin role exists in this app (CLAUDE.md rules
- * out Spring Security), so any logged-in patient can view doctors and
- * manage availability, matching the app's existing simplicity. That
- * includes adding a doctor: nothing here distinguishes a receptionist
- * from a patient account, only whether someone is logged in at all -
- * see the user-guide handbook's note on roles.
+ * decorated frontend. Every endpoint here is reception-only (Role.ADMIN)
+ * now that the app has a role split - managing doctors, departments and
+ * availability is a clinic-administration job, not a patient one.
  */
 @RestController
 public class DoctorApiController {
@@ -57,16 +53,18 @@ public class DoctorApiController {
 
     @GetMapping("/api/doctors")
     public ResponseEntity<?> listDoctors(HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         return ResponseEntity.ok(doctorRepository.findAll().stream().map(DoctorResponse::from).toList());
     }
 
     @PostMapping("/api/doctors")
     public ResponseEntity<?> addDoctor(@RequestBody DoctorRequest request, HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         Department department = departmentRepository.findById(request.departmentId()).orElseThrow();
         Doctor saved = doctorRepository.save(new Doctor(request.name(), request.specialty(), department));
@@ -75,16 +73,18 @@ public class DoctorApiController {
 
     @GetMapping("/api/departments")
     public ResponseEntity<?> listDepartments(HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         return ResponseEntity.ok(departmentRepository.findAll().stream().map(DepartmentResponse::from).toList());
     }
 
     @PostMapping("/api/departments")
     public ResponseEntity<?> addDepartment(@RequestBody DepartmentRequest request, HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         Department saved = departmentRepository.save(new Department(request.name()));
         return ResponseEntity.status(201).body(DepartmentResponse.from(saved));
@@ -92,8 +92,9 @@ public class DoctorApiController {
 
     @GetMapping("/api/doctors/{id}/availability")
     public ResponseEntity<?> listAvailability(@PathVariable Long id, HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         Doctor doctor = doctorRepository.findById(id).orElseThrow();
         return ResponseEntity.ok(availabilityRepository.findByDoctor(doctor).stream()
@@ -104,8 +105,9 @@ public class DoctorApiController {
     @PostMapping("/api/doctors/{id}/availability")
     public ResponseEntity<?> addAvailability(@PathVariable Long id, @RequestBody AvailabilityRuleRequest request,
                                               HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         Doctor doctor = doctorRepository.findById(id).orElseThrow();
         var saved = availabilityService.addRule(doctor, request.dayOfWeek(), request.startTime(),
@@ -115,8 +117,9 @@ public class DoctorApiController {
 
     @GetMapping("/api/doctors/{id}/exceptions")
     public ResponseEntity<?> listExceptions(@PathVariable Long id, HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         Doctor doctor = doctorRepository.findById(id).orElseThrow();
         return ResponseEntity.ok(exceptionRepository.findByDoctor(doctor).stream()
@@ -127,11 +130,22 @@ public class DoctorApiController {
     @PostMapping("/api/doctors/{id}/exceptions")
     public ResponseEntity<?> addException(@PathVariable Long id, @RequestBody ExceptionDateRequest request,
                                            HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         Doctor doctor = doctorRepository.findById(id).orElseThrow();
         var saved = availabilityService.addException(doctor, request.date());
         return ResponseEntity.status(201).body(ExceptionDateResponse.from(saved));
+    }
+
+    private ResponseEntity<ErrorResponse> requireAdmin(HttpSession session) {
+        if (session.getAttribute("patientId") == null) {
+            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        }
+        if (!"ADMIN".equals(session.getAttribute("role"))) {
+            return ResponseEntity.status(403).body(new ErrorResponse("Reception only."));
+        }
+        return null;
     }
 }

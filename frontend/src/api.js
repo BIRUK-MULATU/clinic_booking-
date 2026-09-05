@@ -48,6 +48,9 @@ export const api = {
   callNext: (entryId) => request(`/queue/${entryId}/call`, { method: "POST" }),
   startConsultation: (entryId) => request(`/queue/${entryId}/start-consultation`, { method: "POST" }),
   completeConsultation: (entryId) => request(`/queue/${entryId}/complete`, { method: "POST" }),
+
+  // Reception's day roster: everyone expected on a given date, checked in or not.
+  adminAppointments: (date) => request(`/admin/appointments${date ? `?date=${date}` : ""}`),
 };
 
 export const REJECTION_MESSAGES = {

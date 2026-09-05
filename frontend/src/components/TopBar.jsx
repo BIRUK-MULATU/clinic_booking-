@@ -21,18 +21,25 @@ export default function TopBar() {
 
       {patient && (
         <nav className="nav-links">
-          <NavLink to="/slots" className={({ isActive }) => (isActive ? "active" : "")}>
-            Book a slot
-          </NavLink>
-          <NavLink to="/my-appointments" className={({ isActive }) => (isActive ? "active" : "")}>
-            My appointments
-          </NavLink>
-          <NavLink to="/doctors" className={({ isActive }) => (isActive ? "active" : "")}>
-            Doctors
-          </NavLink>
-          <NavLink to="/queue" className={({ isActive }) => (isActive ? "active" : "")}>
-            Queue
-          </NavLink>
+          {patient.role === "ADMIN" ? (
+            <>
+              <NavLink to="/doctors" className={({ isActive }) => (isActive ? "active" : "")}>
+                Doctors
+              </NavLink>
+              <NavLink to="/queue" className={({ isActive }) => (isActive ? "active" : "")}>
+                Queue
+              </NavLink>
+            </>
+          ) : (
+            <>
+              <NavLink to="/slots" className={({ isActive }) => (isActive ? "active" : "")}>
+                Book a slot
+              </NavLink>
+              <NavLink to="/my-appointments" className={({ isActive }) => (isActive ? "active" : "")}>
+                My appointments
+              </NavLink>
+            </>
+          )}
           <span className="user-chip">
             <span className="avatar">{initial}</span>
             {patient.name}

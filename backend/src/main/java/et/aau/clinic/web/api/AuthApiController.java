@@ -40,6 +40,7 @@ public class AuthApiController {
         }
         session.setAttribute("patientId", patient.get().getId());
         session.setAttribute("patientName", patient.get().getName());
+        session.setAttribute("role", patient.get().getRole().name());
         return ResponseEntity.ok(PatientResponse.from(patient.get()));
     }
 
@@ -53,9 +54,10 @@ public class AuthApiController {
     public ResponseEntity<?> session(HttpSession session) {
         Long patientId = (Long) session.getAttribute("patientId");
         String patientName = (String) session.getAttribute("patientName");
+        String role = (String) session.getAttribute("role");
         if (patientId == null) {
             return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
         }
-        return ResponseEntity.ok(new PatientResponse(patientId, patientName));
+        return ResponseEntity.ok(new PatientResponse(patientId, patientName, role));
     }
 }

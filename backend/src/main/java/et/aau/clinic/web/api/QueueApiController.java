@@ -39,11 +39,13 @@ public class QueueApiController {
     }
 
     // The front-desk view: every entry not yet DONE, oldest check-in first - the same
-    // "who's next" ordering QueueEntryRepository already provides.
+    // "who's next" ordering QueueEntryRepository already provides. Reception-only: running
+    // the queue is a front-desk job, not something a patient does for themselves.
     @GetMapping("/api/queue")
     public ResponseEntity<?> listQueue(HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         return ResponseEntity.ok(queueEntryRepository.findByStatusInOrderByCheckedInAtAsc(ACTIVE_QUEUE_STATUSES)
                 .stream()
@@ -53,25 +55,38 @@ public class QueueApiController {
 
     @PostMapping("/api/queue/{id}/call")
     public ResponseEntity<?> call(@PathVariable Long id, HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         return ResponseEntity.ok(QueueEntryResponse.from(queueService.call(id)));
     }
 
     @PostMapping("/api/queue/{id}/start-consultation")
     public ResponseEntity<?> startConsultation(@PathVariable Long id, HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
         return ResponseEntity.ok(QueueEntryResponse.from(queueService.startConsultation(id)));
     }
 
     @PostMapping("/api/queue/{id}/complete")
     public ResponseEntity<?> complete(@PathVariable Long id, HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        return ResponseEntity.ok(QueueEntryResponse.from(queueService.completeConsultation(id)));
+    }
+
+    private ResponseEntity<ErrorResponse> requireAdmin(HttpSession session) {
         if (session.getAttribute("patientId") == null) {
             return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
         }
-        return ResponseEntity.ok(QueueEntryResponse.from(queueService.completeConsultation(id)));
+        if (!"ADMIN".equals(session.getAttribute("role"))) {
+            return ResponseEntity.status(403).body(new ErrorResponse("Reception only."));
+        }
+        return null;
     }
 }

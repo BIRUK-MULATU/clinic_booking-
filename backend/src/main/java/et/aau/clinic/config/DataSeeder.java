@@ -3,6 +3,7 @@ package et.aau.clinic.config;
 import et.aau.clinic.domain.Department;
 import et.aau.clinic.domain.Doctor;
 import et.aau.clinic.domain.Patient;
+import et.aau.clinic.domain.Role;
 import et.aau.clinic.domain.Slot;
 import et.aau.clinic.repository.DepartmentRepository;
 import et.aau.clinic.repository.DoctorRepository;
@@ -56,6 +57,12 @@ public class DataSeeder implements CommandLineRunner {
         patientRepository.save(adult);
         patientRepository.save(child);
         patientRepository.save(senior);
+
+        // Reception/front-desk account - reuses the Patient table (role ADMIN) rather than a
+        // separate entity, matching this app's one simple session-based login for everyone.
+        Patient reception = new Patient(
+                "Front Desk", LocalDate.of(1990, 1, 1), "reception", "secret", "0911000004", Role.ADMIN);
+        patientRepository.save(reception);
 
         Department cardiology = departmentRepository.save(new Department("Cardiology"));
         Department pediatrics = departmentRepository.save(new Department("Pediatrics"));

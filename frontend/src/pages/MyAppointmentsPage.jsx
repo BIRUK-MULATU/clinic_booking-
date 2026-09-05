@@ -34,7 +34,7 @@ export default function MyAppointmentsPage() {
     <div className="page" id="my-appointments-page">
       <div className="page-header">
         <h1 id="page-title">My Appointments</h1>
-        <p>Confirm a requested appointment, or cancel one you no longer need.</p>
+        <p>Reception confirms requested appointments; check in once yours is confirmed, or cancel one you no longer need.</p>
       </div>
 
       {error && <p className="alert alert-error">{error}</p>}
@@ -53,7 +53,6 @@ export default function MyAppointmentsPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }} id="appointments-table">
         {appointments?.map((appt) => {
           const { raw } = formatSlot(appt.slotStartTime);
-          const canConfirm = appt.status === "REQUESTED";
           const canCheckIn = appt.status === "CONFIRMED";
           const canCancel =
             appt.status === "REQUESTED" || appt.status === "CONFIRMED" || appt.status === "WAITLISTED";
@@ -71,16 +70,6 @@ export default function MyAppointmentsPage() {
                 </span>
               </div>
               <div className="appointment-actions">
-                {canConfirm && (
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    id={`confirm-button-${appt.id}`}
-                    disabled={busyId === appt.id}
-                    onClick={() => act(api.confirm, appt.id)}
-                  >
-                    Confirm
-                  </button>
-                )}
                 {canCheckIn && (
                   <button
                     className="btn btn-secondary btn-sm"

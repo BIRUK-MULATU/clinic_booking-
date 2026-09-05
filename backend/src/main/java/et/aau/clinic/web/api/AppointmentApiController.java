@@ -38,10 +38,15 @@ public class AppointmentApiController {
         return ResponseEntity.ok(AppointmentResponse.from(appointmentService.getAppointment(id)));
     }
 
+    // Reception-only: a patient requests a booking, but the clinic (reception) is who
+    // actually confirms it - matching how a real front desk works, not a self-service toggle.
     @PostMapping("/api/appointments/{id}/confirm")
     public ResponseEntity<?> confirm(@PathVariable Long id, HttpSession session) {
         if (session.getAttribute("patientId") == null) {
             return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        }
+        if (!"ADMIN".equals(session.getAttribute("role"))) {
+            return ResponseEntity.status(403).body(new ErrorResponse("Only reception can confirm an appointment."));
         }
         return ResponseEntity.ok(AppointmentResponse.from(appointmentService.confirm(id)));
     }

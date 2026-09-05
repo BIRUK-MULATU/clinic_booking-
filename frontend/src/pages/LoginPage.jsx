@@ -6,6 +6,7 @@ const DEMO_ACCOUNTS = [
   { username: "abebe", password: "secret", label: "Abebe — adult, no balance" },
   { username: "selam", password: "secret", label: "Selam — child" },
   { username: "almaz", password: "secret", label: "Almaz — senior, outstanding balance" },
+  { username: "reception", password: "secret", label: "Reception — admin" },
 ];
 
 export default function LoginPage() {
@@ -18,7 +19,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (patient) {
-    return <Navigate to={location.state?.from || "/slots"} replace />;
+    return <Navigate to={location.state?.from || "/"} replace />;
   }
 
   async function handleSubmit(e) {
@@ -28,7 +29,7 @@ export default function LoginPage() {
     const result = await login(username, password);
     setSubmitting(false);
     if (result.ok) {
-      navigate("/slots");
+      navigate("/");
     } else {
       setError(result.message);
     }
