@@ -92,11 +92,13 @@ without a container or browser, with progressively fewer, slower, broader-scope 
       only a logging implementation; there is no real gateway to test against.</li>
   <li><strong>Non-functional testing</strong> — load, performance under many concurrent users,
       accessibility, and security penetration testing are all out of scope per the test plan (§1.2).</li>
-  <li><strong>A handful of defensive/unreachable branches</strong> — e.g. a catch-all path in
-      <code>GlobalExceptionHandler</code> and a couple of simple getters never called by any test —
-      are the reason whole-application instruction/line coverage (~90%/~89%) sits below the 100%
-      branch figure on <code>core</code>; none of this uncovered code sits inside the three graded
-      business rules.</li>
+  <li><strong>Whole-application instruction/line coverage</strong> sits at 60.5%/66.1%
+      (recomputed 2026-09-05, see doc 3 §2) — well below the 100% branch figure on
+      <code>core</code>. The dominant cause is the untested <code>web.api</code> package
+      (next bullet), not the application itself: a handful of genuinely defensive/
+      unreachable branches — e.g. a catch-all path in <code>GlobalExceptionHandler</code> and
+      a couple of simple getters never called by any test — account for a small remainder,
+      and none of that uncovered code sits inside the three graded business rules.</li>
   <li><strong>The JSON API added under <code>backend/.../web/api</code></strong> for the separate
       React frontend (<code>frontend/</code>) is additive and untested — it delegates to the same
       <code>AppointmentService</code> the graded suite already covers, but the controllers and DTOs
