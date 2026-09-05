@@ -31,4 +31,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // How many patients are scheduled with one doctor on one day - feeds Rule G / DoctorLoad.
     long countBySlot_DoctorAndStatusInAndSlot_StartTimeBetween(
             Doctor doctor, Collection<AppointmentStatus> statuses, LocalDateTime from, LocalDateTime to);
+
+    // Guards for the admin CRUD deletes: is anything still pointing at this row?
+    boolean existsBySlot(Slot slot);
+
+    boolean existsByPatient(Patient patient);
+
+    boolean existsBySlot_Doctor(Doctor doctor);
 }

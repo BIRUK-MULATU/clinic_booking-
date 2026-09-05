@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, DOCTOR_LOAD } from "../api";
 import { formatAvailability, readImageAsDataUrl } from "../utils";
+import ConfirmButton from "../components/ConfirmButton";
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState(null);
@@ -18,6 +19,8 @@ export default function DoctorsPage() {
   const [newLimit, setNewLimit] = useState(8);
 
   const [limitDrafts, setLimitDrafts] = useState({});
+  const [editingDoctor, setEditingDoctor] = useState(null); // { id, name, specialty, departmentId }
+  const [deptDrafts, setDeptDrafts] = useState({});
 
   const photoInputs = useRef({});
 
@@ -38,6 +41,7 @@ export default function DoctorsPage() {
       .then(({ ok, data }) => {
         if (!ok) return;
         setDepartments(data);
+        setDeptDrafts(Object.fromEntries(data.map((d) => [d.id, d.name])));
         setDepartmentId((current) => current || data[0]?.id || "");
       })
       .catch(() => setError("Could not reach the server."));
@@ -118,6 +122,67 @@ export default function DoctorsPage() {
     }
   }
 
+  async function saveDoctorEdit() {
+    setError("");
+    try {
+      const { ok, data } = await api.updateDoctor(editingDoctor.id, {
+        name: editingDoctor.name,
+        specialty: editingDoctor.specialty,
+        departmentId: Number(editingDoctor.departmentId),
+      });
+      if (!ok) {
+        setError(data?.message || "Could not update the doctor.");
+        return;
+      }
+      setEditingDoctor(null);
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
+    }
+  }
+
+  async function removeDoctor(id) {
+    setError("");
+    try {
+      const { ok, data } = await api.deleteDoctor(id);
+      if (!ok) {
+        setError(data?.message || "Could not delete the doctor.");
+        return;
+      }
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
+    }
+  }
+
+  async function saveDeptName(id) {
+    setError("");
+    try {
+      const { ok, data } = await api.updateDepartment(id, deptDrafts[id]);
+      if (!ok) {
+        setError(data?.message || "Could not rename the department.");
+        return;
+      }
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
+    }
+  }
+
+  async function removeDept(id) {
+    setError("");
+    try {
+      const { ok, data } = await api.deleteDepartment(id);
+      if (!ok) {
+        setError(data?.message || "Could not delete the department.");
+        return;
+      }
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
+    }
+  }
+
   async function saveLimit(doctorId) {
     setError("");
     try {
@@ -151,6 +216,49 @@ export default function DoctorsPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }} id="doctors-table">
         {doctors?.map((doctor) => {
           const loadInfo = doctor.todayLoad && DOCTOR_LOAD[doctor.todayLoad.status];
+          if (editingDoctor?.id === doctor.id) {
+            return (
+              <div className="card" id={`doctor-edit-${doctor.id}`} key={doctor.id}>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Name</label>
+                    <input
+                      value={editingDoctor.name}
+                      onChange={(e) => setEditingDoctor((s) => ({ ...s, name: e.target.value }))}
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Specialty</label>
+                    <input
+                      value={editingDoctor.specialty}
+                      onChange={(e) => setEditingDoctor((s) => ({ ...s, specialty: e.target.value }))}
+                    />
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Department</label>
+                    <select
+                      value={editingDoctor.departmentId}
+                      onChange={(e) => setEditingDoctor((s) => ({ ...s, departmentId: e.target.value }))}
+                    >
+                      {departments?.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button className="btn btn-primary btn-sm" id={`doctor-save-${doctor.id}`} onClick={saveDoctorEdit}
+                          style={{ width: "auto" }}>
+                    Save
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setEditingDoctor(null)}
+                          style={{ width: "auto" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            );
+          }
           return (
             <div className="card appointment-card" id={`doctor-row-${doctor.id}`} key={doctor.id}>
               <div className="appointment-info" style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
@@ -231,6 +339,21 @@ export default function DoctorsPage() {
                 >
                   Manage Availability
                 </Link>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  id={`doctor-edit-btn-${doctor.id}`}
+                  onClick={() =>
+                    setEditingDoctor({
+                      id: doctor.id,
+                      name: doctor.name,
+                      specialty: doctor.specialty,
+                      departmentId: String(departments?.find((d) => d.name === doctor.departmentName)?.id ?? ""),
+                    })
+                  }
+                >
+                  Edit
+                </button>
+                <ConfirmButton id={`doctor-delete-${doctor.id}`} onConfirm={() => removeDoctor(doctor.id)} />
               </div>
             </div>
           );
@@ -308,6 +431,36 @@ export default function DoctorsPage() {
           )}
         </form>
       </div>
+
+      {departments?.length > 0 && (
+        <div className="card" id="departments-table">
+          <h3 style={{ marginTop: 0 }}>Departments</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {departments.map((dept) => (
+              <div
+                key={dept.id}
+                id={`department-row-${dept.id}`}
+                style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}
+              >
+                <input
+                  value={deptDrafts[dept.id] ?? ""}
+                  onChange={(e) => setDeptDrafts((d) => ({ ...d, [dept.id]: e.target.value }))}
+                  style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: 8, minWidth: 180 }}
+                />
+                <button
+                  className="btn btn-secondary btn-sm"
+                  id={`department-save-${dept.id}`}
+                  disabled={deptDrafts[dept.id] === dept.name}
+                  onClick={() => saveDeptName(dept.id)}
+                >
+                  Rename
+                </button>
+                <ConfirmButton id={`department-delete-${dept.id}`} onConfirm={() => removeDept(dept.id)} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Add a department</h3>

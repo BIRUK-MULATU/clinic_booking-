@@ -39,9 +39,18 @@ export const api = {
   doctorAvailability: (doctorId) => request(`/doctors/${doctorId}/availability`),
   addAvailabilityRule: (doctorId, rule) =>
     request(`/doctors/${doctorId}/availability`, { method: "POST", body: JSON.stringify(rule) }),
+  updateDoctor: (id, doctor) => request(`/doctors/${id}`, { method: "PUT", body: JSON.stringify(doctor) }),
+  deleteDoctor: (id) => request(`/doctors/${id}`, { method: "DELETE" }),
+  updateDepartment: (id, name) =>
+    request(`/departments/${id}`, { method: "PUT", body: JSON.stringify({ name }) }),
+  deleteDepartment: (id) => request(`/departments/${id}`, { method: "DELETE" }),
   doctorExceptions: (doctorId) => request(`/doctors/${doctorId}/exceptions`),
   addException: (doctorId, date) =>
     request(`/doctors/${doctorId}/exceptions`, { method: "POST", body: JSON.stringify({ date }) }),
+  deleteAvailabilityRule: (doctorId, ruleId) =>
+    request(`/doctors/${doctorId}/availability/${ruleId}`, { method: "DELETE" }),
+  deleteException: (doctorId, exceptionId) =>
+    request(`/doctors/${doctorId}/exceptions/${exceptionId}`, { method: "DELETE" }),
   setDoctorPhoto: (doctorId, photo) =>
     request(`/doctors/${doctorId}/photo`, { method: "PUT", body: JSON.stringify({ photo }) }),
   setDoctorLimit: (doctorId, dailyPatientLimit) =>
@@ -50,8 +59,13 @@ export const api = {
   // Hospital-expansion: reception creates patient accounts, adds slots, and books for patients.
   patients: () => request("/admin/patients"),
   createPatient: (patient) => request("/admin/patients", { method: "POST", body: JSON.stringify(patient) }),
+  updatePatient: (id, patient) =>
+    request(`/admin/patients/${id}`, { method: "PUT", body: JSON.stringify(patient) }),
+  deletePatient: (id) => request(`/admin/patients/${id}`, { method: "DELETE" }),
   adminSlots: () => request("/admin/slots"),
   addSlot: (slot) => request("/slots", { method: "POST", body: JSON.stringify(slot) }),
+  updateSlot: (id, slot) => request(`/slots/${id}`, { method: "PUT", body: JSON.stringify(slot) }),
+  deleteSlot: (id) => request(`/slots/${id}`, { method: "DELETE" }),
   bookForPatient: (patientId, slotId) =>
     request("/admin/appointments", { method: "POST", body: JSON.stringify({ patientId, slotId }) }),
 

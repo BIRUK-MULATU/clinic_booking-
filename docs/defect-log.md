@@ -195,3 +195,60 @@ plain local `mvn clean verify` rerun on a machine under heavier load than
 usual (backend, frontend dev server, and browser sessions running
 concurrently), and was gone on immediate retry. Treat this defect as
 mitigated, not closed against recurrence under sufficiently adverse timing.
+
+---
+
+## DEF-004: JSON API rendered an HTML error page (HTTP 200) instead of a JSON 400 for a thrown business exception
+
+**Found:** hospital-expansion, while adding the admin CRUD delete endpoints
+(`AdminCrudIT`) - the guarded deletes throw `IllegalStateException`
+("this slot has an appointment against it", etc.), and the first tests to
+assert the resulting HTTP status caught the bug.
+**Component:** `backend/.../web/api/ApiExceptionHandler.java` vs
+`backend/.../web/GlobalExceptionHandler.java`.
+**Severity:** Medium - any `/api/**` endpoint that *throws*
+`IllegalStateException`/`IllegalArgumentException` (rather than returning a
+rejection body) would answer the React client with a Thymeleaf error page
+and a misleading 200, which the `fetch` wrapper cannot parse. No graded
+Thymeleaf path is affected.
+**Priority:** High (blocked the CRUD delete guards from being usable).
+**Status:** Closed
+
+### Steps to reproduce
+
+1. Call `DELETE /api/slots/{id}` for a slot that has an appointment.
+2. The handler throws `IllegalStateException`.
+
+### Expected
+
+`400` with a JSON `{ "message": "..." }` body, via `ApiExceptionHandler`
+(`@RestControllerAdvice(basePackages = "et.aau.clinic.web.api")`).
+
+### Actual
+
+`200` with `Content-Type: text/html` and the body of `error.html`.
+
+### Root cause
+
+Two `@ControllerAdvice` beans both declare
+`@ExceptionHandler({IllegalStateException.class, IllegalArgumentException.class})`:
+the API-scoped `ApiExceptionHandler` and the global `GlobalExceptionHandler`
+(which returns the view name `"error"`). Neither carried an `@Order`, so both
+sat at `Ordered.LOWEST_PRECEDENCE` and Spring's advice ordering between them
+was undefined - in this build the global one won for the new `DELETE`
+handlers. The existing `/api/**` code never exposed this because it returns
+rejections as `ResponseEntity.ok(...)` bodies and does not throw.
+
+The class comment on `ApiExceptionHandler` already *claimed* it "takes
+precedence" - it never actually did.
+
+### Fix
+
+Added `@Order(Ordered.HIGHEST_PRECEDENCE)` to `ApiExceptionHandler`. It is
+package-scoped to `et.aau.clinic.web.api`, so making it highest precedence
+cannot affect the Thymeleaf controllers.
+
+### Verification
+
+`AdminCrudIT` (11 tests) - the guarded deletes now return `400` with a JSON
+message; `mvn clean verify` green.

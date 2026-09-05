@@ -12,4 +12,6 @@ public interface SlotRepository extends JpaRepository<Slot, Long> {
     List<Slot> findAllByOrderByStartTimeAsc();
 
     List<Slot> findByDoctorAndStartTimeBetween(Doctor doctor, LocalDateTime from, LocalDateTime to);
+
+    List<Slot> findByDoctor(Doctor doctor);
 }

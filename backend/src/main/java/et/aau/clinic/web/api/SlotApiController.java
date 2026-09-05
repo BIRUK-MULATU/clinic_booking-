@@ -5,6 +5,7 @@ import et.aau.clinic.domain.Slot;
 import et.aau.clinic.repository.DoctorRepository;
 import et.aau.clinic.repository.SlotRepository;
 import et.aau.clinic.service.AppointmentService;
+import et.aau.clinic.service.DirectoryService;
 import et.aau.clinic.service.DoctorLoadService;
 import et.aau.clinic.web.api.dto.ErrorResponse;
 import et.aau.clinic.web.api.dto.NewSlotRequest;
@@ -12,9 +13,11 @@ import et.aau.clinic.web.api.dto.NewSlotResult;
 import et.aau.clinic.web.api.dto.SlotResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,14 +34,17 @@ public class SlotApiController {
 
     private final AppointmentService appointmentService;
     private final DoctorLoadService doctorLoadService;
+    private final DirectoryService directoryService;
     private final SlotRepository slotRepository;
     private final DoctorRepository doctorRepository;
     private final Clock clock;
 
     public SlotApiController(AppointmentService appointmentService, DoctorLoadService doctorLoadService,
-                             SlotRepository slotRepository, DoctorRepository doctorRepository, Clock clock) {
+                             DirectoryService directoryService, SlotRepository slotRepository,
+                             DoctorRepository doctorRepository, Clock clock) {
         this.appointmentService = appointmentService;
         this.doctorLoadService = doctorLoadService;
+        this.directoryService = directoryService;
         this.slotRepository = slotRepository;
         this.doctorRepository = doctorRepository;
         this.clock = clock;
@@ -110,6 +116,38 @@ public class SlotApiController {
         String warning = doctor == null ? null
                 : doctorLoadService.slotOverLimitWarning(doctor, startTime.toLocalDate()).orElse(null);
         return ResponseEntity.status(201).body(new NewSlotResult(SlotResponse.from(saved), warning));
+    }
+
+    @PutMapping("/api/slots/{id}")
+    public ResponseEntity<?> updateSlot(@PathVariable Long id, @RequestBody NewSlotRequest request,
+                                        HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        LocalDateTime startTime;
+        try {
+            startTime = LocalDateTime.parse(request.startTime());
+        } catch (DateTimeParseException | NullPointerException ex) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Start time must be a valid date and time."));
+        }
+        if (!startTime.isAfter(LocalDateTime.now(clock))) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("A slot must be in the future."));
+        }
+        Slot updated = directoryService.updateSlot(id, request.doctorId(), startTime);
+        String status = updated.getDoctor() == null ? null
+                : doctorLoadService.loadOn(updated.getDoctor(), startTime.toLocalDate()).status().name();
+        return ResponseEntity.ok(SlotResponse.from(updated, appointmentService.slotIsTaken(updated), status));
+    }
+
+    @DeleteMapping("/api/slots/{id}")
+    public ResponseEntity<?> deleteSlot(@PathVariable Long id, HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        directoryService.deleteSlot(id);
+        return ResponseEntity.noContent().build();
     }
 
     // Computes each slot's doctorDayStatus, memoising the load per (doctorId, date) so a

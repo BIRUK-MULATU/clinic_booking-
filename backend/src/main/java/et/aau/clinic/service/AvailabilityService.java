@@ -80,6 +80,19 @@ public class AvailabilityService {
         return saved;
     }
 
+    /** Removing a rule or an exception regenerates the doctor's slots, the same as adding one. */
+    public void deleteRule(DoctorAvailability rule) {
+        Doctor doctor = rule.getDoctor();
+        availabilityRepository.delete(rule);
+        regenerateSlots(doctor);
+    }
+
+    public void deleteException(AvailabilityException exception) {
+        Doctor doctor = exception.getDoctor();
+        exceptionRepository.delete(exception);
+        regenerateSlots(doctor);
+    }
+
     public void regenerateSlots(Doctor doctor) {
         List<WeeklyAvailabilityRule> rules = availabilityRepository.findByDoctor(doctor).stream()
                 .map(a -> new WeeklyAvailabilityRule(a.getDayOfWeek(), a.getStartTime(), a.getEndTime(),

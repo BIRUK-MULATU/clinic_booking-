@@ -5,14 +5,18 @@ import et.aau.clinic.core.RegistrationDecision;
 import et.aau.clinic.domain.Patient;
 import et.aau.clinic.domain.Role;
 import et.aau.clinic.repository.PatientRepository;
+import et.aau.clinic.service.DirectoryService;
 import et.aau.clinic.web.api.dto.ErrorResponse;
 import et.aau.clinic.web.api.dto.NewPatientRequest;
 import et.aau.clinic.web.api.dto.NewPatientResult;
 import et.aau.clinic.web.api.dto.PatientAccountResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,10 +35,12 @@ import java.time.format.DateTimeParseException;
 public class AdminPatientController {
 
     private final PatientRepository patientRepository;
+    private final DirectoryService directoryService;
     private final Clock clock;
 
-    public AdminPatientController(PatientRepository patientRepository, Clock clock) {
+    public AdminPatientController(PatientRepository patientRepository, DirectoryService directoryService, Clock clock) {
         this.patientRepository = patientRepository;
+        this.directoryService = directoryService;
         this.clock = clock;
     }
 
@@ -77,6 +83,35 @@ public class AdminPatientController {
                 request.phone() == null ? "" : request.phone().trim()));
         return ResponseEntity.status(201).body(
                 new NewPatientResult(true, null, PatientAccountResponse.from(saved)));
+    }
+
+    @PutMapping("/api/admin/patients/{id}")
+    public ResponseEntity<?> updatePatient(@PathVariable Long id, @RequestBody NewPatientRequest request,
+                                           HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        LocalDate dateOfBirth;
+        try {
+            dateOfBirth = request.dateOfBirth() == null ? null : LocalDate.parse(request.dateOfBirth());
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Date of birth must be a valid date."));
+        }
+        // username is the account's identity and is not changed here; password only if a new one is given.
+        Patient updated = directoryService.updatePatient(
+                id, request.name(), dateOfBirth, request.phone(), request.password());
+        return ResponseEntity.ok(PatientAccountResponse.from(updated));
+    }
+
+    @DeleteMapping("/api/admin/patients/{id}")
+    public ResponseEntity<?> deletePatient(@PathVariable Long id, HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        directoryService.deletePatient(id);
+        return ResponseEntity.noContent().build();
     }
 
     private ResponseEntity<ErrorResponse> requireAdmin(HttpSession session) {

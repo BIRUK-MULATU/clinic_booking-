@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, REGISTRATION_MESSAGES } from "../api";
 import { formatMoney } from "../utils";
+import ConfirmButton from "../components/ConfirmButton";
 
 const EMPTY = { name: "", dateOfBirth: "", phone: "", username: "", password: "" };
 
@@ -15,6 +16,7 @@ export default function PatientsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editing, setEditing] = useState(null); // { id, name, dateOfBirth, phone, password }
 
   function load() {
     api
@@ -27,6 +29,54 @@ export default function PatientsPage() {
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function startEdit(patient) {
+    setError("");
+    setNotice("");
+    setEditing({
+      id: patient.id,
+      name: patient.name,
+      dateOfBirth: patient.dateOfBirth,
+      phone: patient.phone || "",
+      password: "",
+    });
+  }
+
+  async function saveEdit() {
+    setError("");
+    try {
+      const { ok, data } = await api.updatePatient(editing.id, {
+        name: editing.name,
+        dateOfBirth: editing.dateOfBirth,
+        phone: editing.phone,
+        password: editing.password || null,
+      });
+      if (!ok) {
+        setError(data?.message || "Could not update the patient.");
+        return;
+      }
+      setEditing(null);
+      setNotice("Patient updated.");
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
+    }
+  }
+
+  async function remove(id) {
+    setError("");
+    try {
+      const { ok, data } = await api.deletePatient(id);
+      if (!ok) {
+        setError(data?.message || "Could not delete the patient.");
+        return;
+      }
+      setNotice("Patient deleted.");
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
+    }
   }
 
   async function handleSubmit(e) {
@@ -131,21 +181,72 @@ export default function PatientsPage() {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }} id="patients-table">
-        {patients?.map((patient) => (
-          <div className="card appointment-card" id={`patient-row-${patient.id}`} key={patient.id}>
-            <div className="appointment-info">
-              <span style={{ fontWeight: 700 }}>{patient.name}</span>
-              <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                @{patient.username} · born {patient.dateOfBirth} · {patient.phone || "no phone"}
-              </span>
-              {patient.outstandingBalance > 0 && (
-                <span className="status-pill status-REQUESTED" id={`patient-balance-${patient.id}`}>
-                  Owes {formatMoney(patient.outstandingBalance)}
-                </span>
-              )}
+        {patients?.map((patient) =>
+          editing?.id === patient.id ? (
+            <div className="card" id={`patient-edit-${patient.id}`} key={patient.id}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Name</label>
+                  <input
+                    value={editing.name}
+                    onChange={(e) => setEditing((s) => ({ ...s, name: e.target.value }))}
+                  />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Date of birth</label>
+                  <input
+                    type="date"
+                    value={editing.dateOfBirth}
+                    onChange={(e) => setEditing((s) => ({ ...s, dateOfBirth: e.target.value }))}
+                  />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Phone</label>
+                  <input
+                    value={editing.phone}
+                    onChange={(e) => setEditing((s) => ({ ...s, phone: e.target.value }))}
+                  />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>New password (optional)</label>
+                  <input
+                    value={editing.password}
+                    onChange={(e) => setEditing((s) => ({ ...s, password: e.target.value }))}
+                    placeholder="leave blank to keep"
+                  />
+                </div>
+                <button className="btn btn-primary btn-sm" id={`patient-save-${patient.id}`} onClick={saveEdit}
+                        style={{ width: "auto" }}>
+                  Save
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setEditing(null)} style={{ width: "auto" }}>
+                  Cancel
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ) : (
+            <div className="card appointment-card" id={`patient-row-${patient.id}`} key={patient.id}>
+              <div className="appointment-info">
+                <span style={{ fontWeight: 700 }}>{patient.name}</span>
+                <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                  @{patient.username} · born {patient.dateOfBirth} · {patient.phone || "no phone"}
+                </span>
+                {patient.outstandingBalance > 0 && (
+                  <span className="status-pill status-REQUESTED" id={`patient-balance-${patient.id}`}>
+                    Owes {formatMoney(patient.outstandingBalance)}
+                  </span>
+                )}
+              </div>
+              <div className="appointment-actions">
+                <button className="btn btn-secondary btn-sm" id={`patient-edit-btn-${patient.id}`}
+                        onClick={() => startEdit(patient)}>
+                  Edit
+                </button>
+                <ConfirmButton id={`patient-delete-${patient.id}`} onConfirm={() => remove(patient.id)} />
+              </div>
+            </div>
+          )
+        )}
       </div>
     </div>
   );

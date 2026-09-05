@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, DOCTOR_LOAD, REJECTION_MESSAGES } from "../api";
 import { formatSlot } from "../utils";
+import ConfirmButton from "../components/ConfirmButton";
 
 /**
  * Hospital-expansion: reception adds one-off appointment slots (on top
@@ -20,6 +21,8 @@ export default function ManageSlotsPage() {
 
   const [bookPatientId, setBookPatientId] = useState("");
   const [bookSlotId, setBookSlotId] = useState("");
+
+  const [editing, setEditing] = useState(null); // { id, doctorId, startTime }
 
   const load = useCallback(() => {
     api.adminSlots().then(({ ok, data }) => ok && setSlots(data)).catch(() => setError("Could not reach the server."));
@@ -57,6 +60,47 @@ export default function ManageSlotsPage() {
       setError(err.message || "Could not reach the server.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  function startEdit(slot) {
+    setError("");
+    setNotice("");
+    // datetime-local wants "yyyy-MM-ddTHH:mm"
+    setEditing({ id: slot.id, doctorId: slot.doctor?.id ? String(slot.doctor.id) : "", startTime: slot.startTime.slice(0, 16) });
+  }
+
+  async function saveEdit() {
+    setError("");
+    try {
+      const { ok, data } = await api.updateSlot(editing.id, {
+        doctorId: editing.doctorId ? Number(editing.doctorId) : null,
+        startTime: editing.startTime,
+      });
+      if (!ok) {
+        setError(data?.message || "Could not update the slot.");
+        return;
+      }
+      setEditing(null);
+      setNotice("Slot updated.");
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
+    }
+  }
+
+  async function removeSlot(id) {
+    setError("");
+    try {
+      const { ok, data } = await api.deleteSlot(id);
+      if (!ok) {
+        setError(data?.message || "Could not delete the slot.");
+        return;
+      }
+      setNotice("Slot deleted.");
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
     }
   }
 
@@ -188,6 +232,44 @@ export default function ManageSlotsPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }} id="slots-table">
         {slots?.map((slot) => {
           const dayLoad = slot.doctorDayStatus && DOCTOR_LOAD[slot.doctorDayStatus];
+          if (editing?.id === slot.id) {
+            return (
+              <div className="card" id={`slot-edit-${slot.id}`} key={slot.id}>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+                  <div className="field" style={{ marginBottom: 0, minWidth: 180 }}>
+                    <label>Doctor</label>
+                    <select
+                      value={editing.doctorId}
+                      onChange={(e) => setEditing((s) => ({ ...s, doctorId: e.target.value }))}
+                    >
+                      <option value="">— none —</option>
+                      {doctors.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Date &amp; time</label>
+                    <input
+                      type="datetime-local"
+                      value={editing.startTime}
+                      onChange={(e) => setEditing((s) => ({ ...s, startTime: e.target.value }))}
+                    />
+                  </div>
+                  <button className="btn btn-primary btn-sm" id={`slot-save-${slot.id}`} onClick={saveEdit}
+                          style={{ width: "auto" }}>
+                    Save
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setEditing(null)}
+                          style={{ width: "auto" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            );
+          }
           return (
             <div className="card appointment-card" id={`slot-row-${slot.id}`} key={slot.id}>
               <div className="appointment-info">
@@ -208,6 +290,17 @@ export default function ManageSlotsPage() {
                     </span>
                   )}
                 </span>
+              </div>
+              <div className="appointment-actions">
+                {!slot.booked && (
+                  <>
+                    <button className="btn btn-secondary btn-sm" id={`slot-edit-btn-${slot.id}`}
+                            onClick={() => startEdit(slot)}>
+                      Edit
+                    </button>
+                    <ConfirmButton id={`slot-delete-${slot.id}`} onConfirm={() => removeSlot(slot.id)} />
+                  </>
+                )}
               </div>
             </div>
           );

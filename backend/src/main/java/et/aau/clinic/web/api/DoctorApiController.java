@@ -6,7 +6,10 @@ import et.aau.clinic.repository.AvailabilityExceptionRepository;
 import et.aau.clinic.repository.DepartmentRepository;
 import et.aau.clinic.repository.DoctorAvailabilityRepository;
 import et.aau.clinic.repository.DoctorRepository;
+import et.aau.clinic.domain.AvailabilityException;
+import et.aau.clinic.domain.DoctorAvailability;
 import et.aau.clinic.service.AvailabilityService;
+import et.aau.clinic.service.DirectoryService;
 import et.aau.clinic.service.DoctorLoadService;
 import et.aau.clinic.web.api.dto.AvailabilityRuleRequest;
 import et.aau.clinic.web.api.dto.AvailabilityRuleResponse;
@@ -24,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,6 +53,7 @@ public class DoctorApiController {
     private final DoctorAvailabilityRepository availabilityRepository;
     private final AvailabilityExceptionRepository exceptionRepository;
     private final AvailabilityService availabilityService;
+    private final DirectoryService directoryService;
     private final DoctorLoadService doctorLoadService;
     private final Clock clock;
 
@@ -57,6 +62,7 @@ public class DoctorApiController {
                                 DoctorAvailabilityRepository availabilityRepository,
                                 AvailabilityExceptionRepository exceptionRepository,
                                 AvailabilityService availabilityService,
+                                DirectoryService directoryService,
                                 DoctorLoadService doctorLoadService,
                                 Clock clock) {
         this.doctorRepository = doctorRepository;
@@ -64,6 +70,7 @@ public class DoctorApiController {
         this.availabilityRepository = availabilityRepository;
         this.exceptionRepository = exceptionRepository;
         this.availabilityService = availabilityService;
+        this.directoryService = directoryService;
         this.doctorLoadService = doctorLoadService;
         this.clock = clock;
     }
@@ -102,6 +109,27 @@ public class DoctorApiController {
         }
         Doctor saved = doctorRepository.save(doctor);
         return ResponseEntity.status(201).body(describe(saved));
+    }
+
+    @PutMapping("/api/doctors/{id}")
+    public ResponseEntity<?> updateDoctor(@PathVariable Long id, @RequestBody DoctorRequest request,
+                                          HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        return ResponseEntity.ok(describe(
+                directoryService.updateDoctor(id, request.name(), request.specialty(), request.departmentId())));
+    }
+
+    @DeleteMapping("/api/doctors/{id}")
+    public ResponseEntity<?> deleteDoctor(@PathVariable Long id, HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        directoryService.deleteDoctor(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/api/doctors/{id}/photo")
@@ -159,6 +187,26 @@ public class DoctorApiController {
         return ResponseEntity.status(201).body(DepartmentResponse.from(saved));
     }
 
+    @PutMapping("/api/departments/{id}")
+    public ResponseEntity<?> updateDepartment(@PathVariable Long id, @RequestBody DepartmentRequest request,
+                                              HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        return ResponseEntity.ok(DepartmentResponse.from(directoryService.updateDepartment(id, request.name())));
+    }
+
+    @DeleteMapping("/api/departments/{id}")
+    public ResponseEntity<?> deleteDepartment(@PathVariable Long id, HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        directoryService.deleteDepartment(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/api/doctors/{id}/availability")
     public ResponseEntity<?> listAvailability(@PathVariable Long id, HttpSession session) {
         ResponseEntity<ErrorResponse> denied = requireAdmin(session);
@@ -184,6 +232,21 @@ public class DoctorApiController {
         return ResponseEntity.status(201).body(AvailabilityRuleResponse.from(saved));
     }
 
+    @DeleteMapping("/api/doctors/{id}/availability/{ruleId}")
+    public ResponseEntity<?> deleteAvailability(@PathVariable Long id, @PathVariable Long ruleId,
+                                                HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        DoctorAvailability rule = availabilityRepository.findById(ruleId).orElseThrow();
+        if (!rule.getDoctor().getId().equals(id)) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("That rule belongs to a different doctor."));
+        }
+        availabilityService.deleteRule(rule);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/api/doctors/{id}/exceptions")
     public ResponseEntity<?> listExceptions(@PathVariable Long id, HttpSession session) {
         ResponseEntity<ErrorResponse> denied = requireAdmin(session);
@@ -206,6 +269,21 @@ public class DoctorApiController {
         Doctor doctor = doctorRepository.findById(id).orElseThrow();
         var saved = availabilityService.addException(doctor, request.date());
         return ResponseEntity.status(201).body(ExceptionDateResponse.from(saved));
+    }
+
+    @DeleteMapping("/api/doctors/{id}/exceptions/{exceptionId}")
+    public ResponseEntity<?> deleteException(@PathVariable Long id, @PathVariable Long exceptionId,
+                                             HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        AvailabilityException exception = exceptionRepository.findById(exceptionId).orElseThrow();
+        if (!exception.getDoctor().getId().equals(id)) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("That exception belongs to a different doctor."));
+        }
+        availabilityService.deleteException(exception);
+        return ResponseEntity.noContent().build();
     }
 
     // Returns an error message if the photo is present but unusable, or null if it is

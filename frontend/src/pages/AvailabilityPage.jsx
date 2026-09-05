@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
+import ConfirmButton from "../components/ConfirmButton";
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
@@ -73,6 +74,26 @@ export default function AvailabilityPage() {
     }
   }
 
+  async function removeRule(ruleId) {
+    setError("");
+    const { ok, data } = await api.deleteAvailabilityRule(doctorId, ruleId).catch(() => ({ ok: false }));
+    if (!ok) {
+      setError(data?.message || "Could not delete the rule.");
+      return;
+    }
+    load();
+  }
+
+  async function removeException(exceptionId) {
+    setError("");
+    const { ok, data } = await api.deleteException(doctorId, exceptionId).catch(() => ({ ok: false }));
+    if (!ok) {
+      setError(data?.message || "Could not delete the exception.");
+      return;
+    }
+    load();
+  }
+
   return (
     <div className="page" id="availability-page">
       <div className="page-header">
@@ -92,8 +113,13 @@ export default function AvailabilityPage() {
           {rules?.map((rule) => (
             <div className="summary-row" id={`availability-rule-${rule.id}`} key={rule.id}>
               <span className="label">{rule.dayOfWeek}</span>
-              <span className="value">
+              <span className="value" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 {rule.startTime}–{rule.endTime} ({rule.slotDurationMinutes} min slots)
+                <ConfirmButton
+                  id={`delete-availability-rule-${rule.id}`}
+                  label="Remove"
+                  onConfirm={() => removeRule(rule.id)}
+                />
               </span>
             </div>
           ))}
@@ -144,7 +170,14 @@ export default function AvailabilityPage() {
         <div id="exceptions-table" style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
           {exceptions?.map((exception) => (
             <div className="summary-row" id={`exception-${exception.id}`} key={exception.id}>
-              <span className="value">{exception.date}</span>
+              <span className="value" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {exception.date}
+                <ConfirmButton
+                  id={`delete-exception-${exception.id}`}
+                  label="Remove"
+                  onConfirm={() => removeException(exception.id)}
+                />
+              </span>
             </div>
           ))}
         </div>
