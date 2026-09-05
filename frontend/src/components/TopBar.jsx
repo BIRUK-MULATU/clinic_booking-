@@ -23,11 +23,17 @@ export default function TopBar() {
         <nav className="nav-links">
           {patient.role === "ADMIN" ? (
             <>
-              <NavLink to="/doctors" className={({ isActive }) => (isActive ? "active" : "")}>
-                Doctors
-              </NavLink>
               <NavLink to="/queue" className={({ isActive }) => (isActive ? "active" : "")}>
                 Reception
+              </NavLink>
+              <NavLink to="/manage-slots" className={({ isActive }) => (isActive ? "active" : "")}>
+                Slots
+              </NavLink>
+              <NavLink to="/patients" className={({ isActive }) => (isActive ? "active" : "")}>
+                Patients
+              </NavLink>
+              <NavLink to="/doctors" className={({ isActive }) => (isActive ? "active" : "")}>
+                Doctors
               </NavLink>
             </>
           ) : (

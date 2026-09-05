@@ -61,7 +61,18 @@ export default function SlotsPage() {
                   <span className="slot-date">{dateLabel}</span>
                   <span className="slot-clock">{timeLabel}</span>
                   {slot.doctor && (
-                    <span className="slot-clock" id={`slot-doctor-${slot.id}`}>
+                    <span
+                      className="slot-clock"
+                      id={`slot-doctor-${slot.id}`}
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      {slot.doctor.photo && (
+                        <img
+                          src={slot.doctor.photo}
+                          alt={slot.doctor.name}
+                          style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }}
+                        />
+                      )}
                       {slot.doctor.name} · {slot.doctor.specialty}
                     </span>
                   )}

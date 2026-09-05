@@ -10,6 +10,8 @@ import DoctorsPage from "./pages/DoctorsPage";
 import AvailabilityPage from "./pages/AvailabilityPage";
 import QueuePage from "./pages/QueuePage";
 import VisitRecordPage from "./pages/VisitRecordPage";
+import PatientsPage from "./pages/PatientsPage";
+import ManageSlotsPage from "./pages/ManageSlotsPage";
 import { useAuth } from "./context/AuthContext";
 
 function HomeRedirect() {
@@ -85,6 +87,22 @@ export default function App() {
           element={
             <ProtectedRoute role="ADMIN">
               <VisitRecordPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patients"
+          element={
+            <ProtectedRoute role="ADMIN">
+              <PatientsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manage-slots"
+          element={
+            <ProtectedRoute role="ADMIN">
+              <ManageSlotsPage />
             </ProtectedRoute>
           }
         />

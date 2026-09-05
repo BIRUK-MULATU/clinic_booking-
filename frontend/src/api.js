@@ -42,6 +42,16 @@ export const api = {
   doctorExceptions: (doctorId) => request(`/doctors/${doctorId}/exceptions`),
   addException: (doctorId, date) =>
     request(`/doctors/${doctorId}/exceptions`, { method: "POST", body: JSON.stringify({ date }) }),
+  setDoctorPhoto: (doctorId, photo) =>
+    request(`/doctors/${doctorId}/photo`, { method: "PUT", body: JSON.stringify({ photo }) }),
+
+  // Hospital-expansion: reception creates patient accounts, adds slots, and books for patients.
+  patients: () => request("/admin/patients"),
+  createPatient: (patient) => request("/admin/patients", { method: "POST", body: JSON.stringify(patient) }),
+  adminSlots: () => request("/admin/slots"),
+  addSlot: (slot) => request("/slots", { method: "POST", body: JSON.stringify(slot) }),
+  bookForPatient: (patientId, slotId) =>
+    request("/admin/appointments", { method: "POST", body: JSON.stringify({ patientId, slotId }) }),
 
   // Hospital-expansion Phase D: the front-desk queue.
   queue: () => request("/queue"),
@@ -80,4 +90,13 @@ export const VISIT_REJECTION_MESSAGES = {
   VISIT_ALREADY_RECORDED: "This visit has already been recorded.",
   DIAGNOSIS_REQUIRED: "A diagnosis is required.",
   DIAGNOSIS_TOO_LONG: "The diagnosis is too long (500 characters maximum).",
+};
+
+// Hospital-expansion: why PatientRegistrationPolicy refused to create an account.
+export const REGISTRATION_MESSAGES = {
+  NAME_REQUIRED: "Enter the patient's name.",
+  USERNAME_REQUIRED: "Enter a username.",
+  USERNAME_TAKEN: "That username is already taken.",
+  PASSWORD_TOO_SHORT: "The password must be at least 4 characters.",
+  INVALID_DATE_OF_BIRTH: "Enter a valid date of birth (in the past, age 120 or under).",
 };

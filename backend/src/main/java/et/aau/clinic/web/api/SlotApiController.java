@@ -63,7 +63,7 @@ public class SlotApiController {
             return denied;
         }
         return ResponseEntity.ok(appointmentService.listUpcomingSlots().stream()
-                .map(SlotResponse::from)
+                .map(slot -> SlotResponse.from(slot, appointmentService.slotIsTaken(slot)))
                 .toList());
     }
 

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { formatAvailability, readImageAsDataUrl } from "../utils";
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState(null);
@@ -13,6 +14,9 @@ export default function DoctorsPage() {
   const [doctorName, setDoctorName] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [departmentId, setDepartmentId] = useState("");
+  const [photo, setPhoto] = useState("");
+
+  const photoInputs = useRef({});
 
   function load() {
     api
@@ -30,6 +34,16 @@ export default function DoctorsPage() {
   }
 
   useEffect(load, []);
+
+  async function pickPhoto(file, onReady) {
+    if (!file) return;
+    try {
+      onReady(await readImageAsDataUrl(file));
+      setError("");
+    } catch (err) {
+      setError(err.message || "Could not read that image.");
+    }
+  }
 
   async function handleAddDepartment(e) {
     e.preventDefault();
@@ -57,22 +71,38 @@ export default function DoctorsPage() {
     setSubmitting(true);
     setError("");
     try {
-      const { ok } = await api.addDoctor({
+      const { ok, data } = await api.addDoctor({
         name: doctorName.trim(),
         specialty: specialty.trim(),
         departmentId: Number(departmentId),
+        photo: photo || null,
       });
       if (!ok) {
-        setError("Could not add the doctor.");
+        setError(data?.message || "Could not add the doctor.");
         return;
       }
       setDoctorName("");
       setSpecialty("");
+      setPhoto("");
       load();
-    } catch {
-      setError("Could not reach the server.");
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function changePhoto(doctorId, dataUrl) {
+    setError("");
+    try {
+      const { ok, data } = await api.setDoctorPhoto(doctorId, dataUrl);
+      if (!ok) {
+        setError(data?.message || "Could not update the photo.");
+        return;
+      }
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
     }
   }
 
@@ -80,10 +110,10 @@ export default function DoctorsPage() {
     <div className="page" id="doctors-page">
       <div className="page-header">
         <h1 id="page-title">Doctors</h1>
-        <p>Hospital-expansion Phase A/B — doctors, departments, and their weekly availability.</p>
+        <p>Doctors with their specialty, weekly availability, and photo.</p>
       </div>
 
-      {error && <p className="alert alert-error">{error}</p>}
+      {error && <p className="alert alert-error" id="doctors-error">{error}</p>}
 
       {doctors?.length === 0 && (
         <div className="card empty-state" id="no-doctors-message">
@@ -95,13 +125,45 @@ export default function DoctorsPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }} id="doctors-table">
         {doctors?.map((doctor) => (
           <div className="card appointment-card" id={`doctor-row-${doctor.id}`} key={doctor.id}>
-            <div className="appointment-info">
-              <span style={{ fontWeight: 700 }}>{doctor.name}</span>
-              <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                {doctor.specialty} · {doctor.departmentName}
+            <div className="appointment-info" style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+              {doctor.photo ? (
+                <img className="doctor-photo" id={`doctor-photo-${doctor.id}`} src={doctor.photo} alt={doctor.name} />
+              ) : (
+                <span className="doctor-photo doctor-photo--placeholder" id={`doctor-photo-${doctor.id}`}>
+                  🩺
+                </span>
+              )}
+              <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontWeight: 700 }}>{doctor.name}</span>
+                <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                  {doctor.specialty} · {doctor.departmentName}
+                </span>
+                <span
+                  style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}
+                  id={`doctor-availability-${doctor.id}`}
+                >
+                  {formatAvailability(doctor.availability)}
+                </span>
               </span>
             </div>
             <div className="appointment-actions">
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                ref={(el) => {
+                  photoInputs.current[doctor.id] = el;
+                }}
+                id={`doctor-photo-input-${doctor.id}`}
+                onChange={(e) => pickPhoto(e.target.files[0], (url) => changePhoto(doctor.id, url))}
+              />
+              <button
+                className="btn btn-secondary btn-sm"
+                id={`change-photo-${doctor.id}`}
+                onClick={() => photoInputs.current[doctor.id]?.click()}
+              >
+                {doctor.photo ? "Change photo" : "Add photo"}
+              </button>
               <Link
                 className="btn btn-secondary btn-sm"
                 id={`manage-availability-link-${doctor.id}`}
@@ -148,6 +210,16 @@ export default function DoctorsPage() {
                 ))}
               </select>
             </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="doctor-photo-input">Photo</label>
+              <input
+                id="doctor-photo-input"
+                type="file"
+                accept="image/*"
+                onChange={(e) => pickPhoto(e.target.files[0], setPhoto)}
+              />
+            </div>
+            {photo && <img className="doctor-photo" src={photo} alt="preview" id="doctor-photo-preview" />}
             <button
               className="btn btn-primary btn-sm"
               id="add-doctor-submit"
