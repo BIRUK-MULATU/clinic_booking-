@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Test Summary Report — Clinic Booking System</title>
+<style>
+  @page { margin: 22mm 18mm; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 10.7pt; line-height: 1.5; }
+  .titleblock { text-align: center; margin-bottom: 10mm; }
+  .titleblock .university { color: #555; font-size: 10pt; letter-spacing: 0.5px; }
+  .titleblock .course { color: #555; font-size: 10pt; margin-bottom: 6mm; }
+  .titleblock h1 { font-size: 22pt; margin: 2mm 0 1mm 0; color: #0b3d66; }
+  .titleblock .subtitle { font-size: 13pt; color: #333; margin-bottom: 6mm; }
+  table.meta { margin: 0 auto; border-collapse: collapse; font-size: 10pt; }
+  table.meta th { text-align: right; padding: 2px 8px; color: #555; font-weight: 600; }
+  table.meta td { text-align: left; padding: 2px 8px; }
+  h2 { color: #0b3d66; font-size: 14pt; border-bottom: 1.5px solid #0b3d66; padding-bottom: 2px; margin-top: 9mm; }
+  h3 { color: #0b3d66; font-size: 11.5pt; margin-top: 6mm; margin-bottom: 2mm; }
+  table.data { border-collapse: collapse; width: 100%; margin: 3mm 0; font-size: 9.7pt; }
+  table.data th, table.data td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
+  table.data th { background: #eef4f9; color: #0b3d66; }
+  code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; font-family: "Courier New", monospace; font-size: 9.3pt; }
+  ul, ol { margin: 2mm 0; padding-left: 6mm; }
+  li { margin-bottom: 1.5mm; }
+  .note { background: #fff9e6; border-left: 3px solid #e0b400; padding: 2mm 4mm; font-size: 10pt; margin: 3mm 0; }
+  .verdict { background: #eaf7ea; border: 1.5px solid #1a7a1a; border-radius: 4px; padding: 4mm 5mm; margin: 4mm 0; }
+  .verdict strong { color: #1a7a1a; }
+  .small { font-size: 9.3pt; color: #555; }
+  .page-break { page-break-before: always; }
+  .yes { color: #1a7a1a; font-weight: 600; }
+  .partial { color: #b3720b; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="titleblock">
+  <div class="university">Addis Ababa University — School of Information Technology and Engineering</div>
+  <div class="course">Software Testing and Validation — Final Project</div>
+  <h1>Test Summary Report</h1>
+  <div class="subtitle">Clinic Booking System</div>
+  <table class="meta">
+    <tr><th>Student</th><td>Biruk Mulatu</td></tr>
+    <tr><th>Student ID</th><td>[STUDENT ID — fill in before submission]</td></tr>
+    <tr><th>Instructor</th><td>Abel Tadesse</td></tr>
+    <tr><th>Date</th><td>4 September 2026</td></tr>
+  </table>
+</div>
+
+<h2>1. What was tested</h2>
+<ul>
+  <li>All three domain rules (fee by age, booking eligibility, appointment lifecycle) and the
+      Rule 3b late-cancellation guard, via 58 unit tests derived from equivalence partitioning,
+      boundary value analysis, a decision table and state transition testing (full derivation in
+      the test design document).</li>
+  <li>The <code>AppointmentService</code> orchestration layer, against Mockito-mocked repositories,
+      a <code>Clock</code> stub, and a mocked <code>NotificationService</code>.</li>
+  <li>The same service wired to real Spring Data JPA repositories and a real H2 database (9
+      integration tests: 5 in <code>AppointmentServiceIT</code>, 4 in the MockMvc-driven
+      <code>AppointmentJourneyIT</code>), including a Mockito spy on the real notification
+      service.</li>
+  <li>The full user journey — log in, view slots, book, see the fee on confirmation, cancel —
+      driven through a real headless Chrome browser via Selenium and the Page Object pattern
+      (2 system tests in <code>BookingJourneyIT</code>).</li>
+  <li>Continuous integration itself: both the GitHub Actions workflow and a Jenkins pipeline (run
+      via the provided Docker setup) were exercised end-to-end, not just reviewed as
+      configuration.</li>
+  <li>Regression detection: a deliberate one-line defect was introduced, observed failing in CI,
+      and fixed (§3 of the defect log and metrics document).</li>
+</ul>
+<table class="data">
+  <tr><th>Level</th><th>Test classes</th><th>Test methods</th></tr>
+  <tr><td>Unit</td><td><code>FeeCalculatorTest</code>, <code>BookingPolicyTest</code>,
+      <code>AppointmentStateMachineTest</code>, <code>AppointmentServiceTest</code></td>
+      <td>58</td></tr>
+  <tr><td>Integration</td><td><code>AppointmentServiceIT</code>, <code>AppointmentJourneyIT</code></td>
+      <td>9</td></tr>
+  <tr><td>System</td><td><code>BookingJourneyIT</code> (Page Objects: <code>LoginPage</code>,
+      <code>SlotsPage</code>, <code>BookingPage</code>, <code>ConfirmationPage</code>,
+      <code>MyAppointmentsPage</code>, plus a shared <code>AbstractPage</code>)</td><td>2</td></tr>
+  <tr><td><strong>Total</strong></td><td></td><td><strong>69</strong></td></tr>
+</table>
+<p class="small">58 : 9 : 2 is a genuine pyramid shape — the large majority of cases run fast and
+without a container or browser, with progressively fewer, slower, broader-scope tests above them.</p>
+
+<h2>2. What was not tested</h2>
+<ul>
+  <li><strong>Concurrency.</strong> Two patients racing to book the same slot at the same instant
+      is not tested; C1 (<code>existsBySlotAndStatusIn</code>) is correct for sequential requests
+      but has no explicit test under concurrent load, and no database-level uniqueness constraint
+      backs it up. This is the single largest functional gap and is carried as residual risk below.</li>
+  <li><strong>Real SMS delivery.</strong> By design (CLAUDE.md), <code>NotificationService</code> has
+      only a logging implementation; there is no real gateway to test against.</li>
+  <li><strong>Non-functional testing</strong> — load, performance under many concurrent users,
+      accessibility, and security penetration testing are all out of scope per the test plan (§1.2).</li>
+  <li><strong>A handful of defensive/unreachable branches</strong> — e.g. a catch-all path in
+      <code>GlobalExceptionHandler</code> and a couple of simple getters never called by any test —
+      are the reason whole-application instruction/line coverage (~90%/~89%) sits below the 100%
+      branch figure on <code>core</code>; none of this uncovered code sits inside the three graded
+      business rules.</li>
+</ul>
+
+<h2>3. Results against exit criteria</h2>
+<p>Against the exit criteria set in the test plan (§3.2):</p>
+<table class="data">
+  <tr><th>Criterion</th><th>Result</th></tr>
+  <tr><td><code>mvn clean verify</code> passes in one run (unit + integration + system)</td>
+      <td class="yes">Met — BUILD SUCCESS, 69/69 tests green</td></tr>
+  <tr><td>≥80% branch coverage on <code>et.aau.clinic.core</code>, gate enforced</td>
+      <td class="yes">Met — 100% (34/34 branches)</td></tr>
+  <tr><td>Every valid/invalid state transition in the 5×4 grid has an explicit test</td>
+      <td class="yes">Met — 5 valid tests + a generated, count-asserted set of all 15 invalid pairs</td></tr>
+  <tr><td>Every specified boundary value has an explicit test</td>
+      <td class="yes">Met — all of −1, 0, 17, 18, 64, 65, 120, 121 (fee); the 2h notice boundary;
+      the 24h cancellation boundary</td></tr>
+  <tr><td>GitHub Actions green on <code>main</code>; Jenkins run at least once via Docker</td>
+      <td class="yes">Met — both verified, Jenkins verified end-to-end with real build attempts, not
+      just reviewed configuration</td></tr>
+  <tr><td>A deliberate regression introduced, caught by CI, then fixed, with evidence recorded</td>
+      <td class="yes">Met — see <code>docs/regression-demo.md</code> and defect log §3</td></tr>
+  <tr><td>All defects logged are Closed, or explicitly carried as residual risk</td>
+      <td class="yes">Met — DEF-001/002/003 all Closed; concurrency gap carried explicitly below</td></tr>
+</table>
+
+<h2>4. Outstanding defects and residual risk</h2>
+<table class="data">
+  <tr><th>Item</th><th>Status</th><th>Residual risk</th></tr>
+  <tr><td>DEF-001, DEF-002, DEF-003</td><td>All Closed, verified</td><td>None outstanding — each has
+      a verification step confirming the fix under the same conditions that exposed it.</td></tr>
+  <tr><td>Concurrent double-booking of a slot</td><td>Not fixed — not attempted (out of scope
+      per the test plan)</td><td><strong>Medium.</strong> Low likelihood in a small clinic's real
+      usage pattern (requests are not sub-second-frequent), but the current check-then-act pattern
+      (<code>existsBySlotAndStatusIn</code> then <code>save</code>) is a textbook race condition.
+      Would need either a unique database constraint on (slot, non-terminal-status) or a
+      transactional lock to close.</td></tr>
+  <tr><td>Defect metrics based on a small sample (3 defects, 1 developer, no external review yet)</td>
+      <td>N/A</td><td><strong>Low–Medium.</strong> DRE of 100% and 0 escaped defects reflect that no
+      external party has evaluated the system yet, not that the system is defect-free; the
+      instructor's own evaluation is the first real external validation this project will
+      undergo (see §5's verification/validation distinction).</td></tr>
+</table>
+
+<h2>5. Release recommendation</h2>
+<div class="verdict">
+<p><strong>Recommendation: ready to submit, with the concurrency gap disclosed as a known
+limitation rather than fixed.</strong></p>
+<p>All exit criteria in §3 are met, the coverage gate is exceeded (100% vs. an 80% target) on the
+graded package, all three defects found during development are closed and verified, and the
+regression-detection requirement has real, reproducible evidence (two CI run links, a failing one
+and a passing one) rather than a description of what would happen. For a course project whose
+explicit grading criterion is the testing effort rather than the application's production-readiness,
+this is a defensible stopping point.</p>
+<p>The one open item — concurrent double-booking — is a real, named risk rather than an unknown one,
+which is itself the point of a test summary report: it exists precisely to say plainly what was not
+covered, not just to report a clean scorecard. If this were a real clinic system rather than a
+course project, that gap would block release; here, it is disclosed and left as a direction for
+further work rather than fixed under time pressure this close to the deadline, since fixing it
+correctly would mean adding a database constraint and its own test coverage rather than a quick
+patch.</p>
+</div>
+
+<h2>6. Foundations reflection — error, fault, failure; verification vs. validation</h2>
+<p><strong>The defect: DEF-003</strong>, the flaky Selenium page-object bug found while verifying the
+Jenkins pipeline (full write-up in the defect log). <code>BookingJourneyIT</code> passed reliably in
+GitHub Actions but threw <code>NoSuchElementException</code> the first time it ran inside the
+Jenkins Docker container.</p>
+<ul>
+  <li><strong>Error</strong> — the human mistake behind the defect was a mental model slip while
+      writing the page objects: assuming that once Selenium's <code>click()</code> call returns
+      after triggering a redirect, the destination page has already finished rendering. That
+      assumption is not guaranteed by the WebDriver spec, which only promises that a triggered
+      navigation has <em>started</em>, not that it has completed.</li>
+  <li><strong>Fault</strong> — the resulting defect in the code: every page object called
+      <code>driver.findElement(...)</code> directly, with no wait, immediately after a click that
+      caused a navigation. The fault sat dormant in every page object from Phase 7 onward.</li>
+  <li><strong>Failure</strong> — the observable, external symptom: <code>BookingJourneyIT</code>
+      threw <code>NoSuchElementException</code> looking for <code>#confirmation-status</code>, but
+      only under the tighter CPU budget of the Docker container — the same fault produced no
+      failure at all on the faster GitHub-hosted runner, which is exactly why a fault can sit
+      latent for a long time before a particular environment turns it into a visible failure.</li>
+</ul>
+<p><strong>Verification or validation?</strong> This was caught by <strong>verification</strong>, not
+validation. Verification asks "are we building the product right" — checking the system against its
+own specification and internal correctness, which is exactly what an automated system test running
+inside a CI pipeline does: it re-runs a known, specified user journey and checks the code behaves
+correctly, with no real user or stakeholder involved. Validation — checking with an actual user or
+against real-world use ("are we building the right product") — never entered into finding this
+defect at all; no person ever clicked through the failing journey. That the defect only appeared
+under one specific execution environment (constrained CPU) is itself a small lesson in why
+verification has to include more than one environment: the GitHub Actions run alone would have
+verified the same specification and still missed this fault entirely.</p>
+
+</body>
+</html>

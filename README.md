@@ -9,12 +9,11 @@ School of Information Technology and Engineering. Instructor: Abel Tadesse.
 
 ## Group members
 
+Solo submission (group size 1).
+
 | Name | Student ID |
 |------|------------|
-| _fill in_ | _fill in_ |
-| _fill in_ | _fill in_ |
-| _fill in_ | _fill in_ |
-| _fill in_ | _fill in_ |
+| Biruk Mulatu | _fill in before submission_ |
 
 ## Stack
 
@@ -86,3 +85,16 @@ report.
 ## Defect log
 
 Real defects found during development are logged in `docs/defect-log.md`.
+
+## Project deliverables (PDF)
+
+The four documents required alongside this repository are in `docs/deliverables/`:
+
+- `01-test-plan.pdf` — Part A
+- `02-test-design.pdf` — Part B (equivalence partitioning, boundary value analysis, decision
+  table, state transition testing, with every derived case mapped to its test method)
+- `03-defect-log-and-metrics.pdf` — Parts F and G
+- `04-test-summary-and-reflection.pdf` — Parts H and I
+
+Each `.pdf` is generated from the same-named `.html` file in that directory (via `wkhtmltopdf`);
+edit the HTML and re-render if the content changes.

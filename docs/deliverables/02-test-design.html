@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Test Design Document — Clinic Booking System</title>
+<style>
+  @page { margin: 22mm 18mm; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 10.5pt; line-height: 1.5; }
+  .titleblock { text-align: center; margin-bottom: 10mm; }
+  .titleblock .university { color: #555; font-size: 10pt; letter-spacing: 0.5px; }
+  .titleblock .course { color: #555; font-size: 10pt; margin-bottom: 6mm; }
+  .titleblock h1 { font-size: 22pt; margin: 2mm 0 1mm 0; color: #0b3d66; }
+  .titleblock .subtitle { font-size: 13pt; color: #333; margin-bottom: 6mm; }
+  table.meta { margin: 0 auto; border-collapse: collapse; font-size: 10pt; }
+  table.meta th { text-align: right; padding: 2px 8px; color: #555; font-weight: 600; }
+  table.meta td { text-align: left; padding: 2px 8px; }
+  h2 { color: #0b3d66; font-size: 14pt; border-bottom: 1.5px solid #0b3d66; padding-bottom: 2px; margin-top: 9mm; }
+  h3 { color: #0b3d66; font-size: 11.5pt; margin-top: 6mm; margin-bottom: 2mm; }
+  table.data { border-collapse: collapse; width: 100%; margin: 3mm 0; font-size: 9.7pt; }
+  table.data th, table.data td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
+  table.data th { background: #eef4f9; color: #0b3d66; }
+  table.data td.center, table.data th.center { text-align: center; }
+  code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; font-family: "Courier New", monospace; font-size: 9.3pt; }
+  .note { background: #fff9e6; border-left: 3px solid #e0b400; padding: 2mm 4mm; font-size: 10pt; margin: 3mm 0; }
+  .small { font-size: 9.3pt; color: #555; }
+  .page-break { page-break-before: always; }
+  .yes { color: #1a7a1a; font-weight: 600; }
+  .no { color: #b3261e; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="titleblock">
+  <div class="university">Addis Ababa University — School of Information Technology and Engineering</div>
+  <div class="course">Software Testing and Validation — Final Project</div>
+  <h1>Test Design Document</h1>
+  <div class="subtitle">Clinic Booking System</div>
+  <table class="meta">
+    <tr><th>Student</th><td>Biruk Mulatu</td></tr>
+    <tr><th>Student ID</th><td>[STUDENT ID — fill in before submission]</td></tr>
+    <tr><th>Instructor</th><td>Abel Tadesse</td></tr>
+    <tr><th>Date</th><td>4 September 2026</td></tr>
+  </table>
+</div>
+
+<p>This document derives test cases for the three domain rules using the four formal techniques the
+assignment requires: equivalence partitioning, boundary value analysis, a decision table, and state
+transition testing. Every case listed below is implemented, by the same name, in
+<code>src/test/java/et/aau/clinic/unit/</code> — the map from design to code is exact, not
+illustrative.</p>
+
+<h2>1. Equivalence partitioning and boundary value analysis — Rule 1 (consultation fee by age)</h2>
+<p>Implemented in <code>core.FeeCalculator</code>. The input is a single integer, <code>age</code>.</p>
+
+<h3>1.1 Partitions</h3>
+<table class="data">
+  <tr><th>#</th><th>Partition</th><th>Range</th><th>Expected outcome</th></tr>
+  <tr><td>P1</td><td>Invalid — below range</td><td>age &lt; 0</td><td>Rejected: <code>IllegalArgumentException</code></td></tr>
+  <tr><td>P2</td><td>CHILD</td><td>0 ≤ age ≤ 17</td><td>Category CHILD, fee 100 ETB</td></tr>
+  <tr><td>P3</td><td>ADULT</td><td>18 ≤ age ≤ 64</td><td>Category ADULT, fee 250 ETB</td></tr>
+  <tr><td>P4</td><td>SENIOR</td><td>65 ≤ age ≤ 120</td><td>Category SENIOR, fee 150 ETB</td></tr>
+  <tr><td>P5</td><td>Invalid — above range</td><td>age &gt; 120</td><td>Rejected: <code>IllegalArgumentException</code></td></tr>
+</table>
+
+<h3>1.2 Boundaries</h3>
+<p>Three valid partitions sitting side by side produce six interior boundaries (the low and high
+edge of each), plus the two outer edges where valid meets invalid — eight boundary values in total,
+exactly the set CLAUDE.md specifies: <strong>−1, 0, 17, 18, 64, 65, 120, 121</strong>.</p>
+
+<h3>1.3 Derived test cases</h3>
+<table class="data">
+  <tr><th>Case</th><th>Input (age)</th><th>Partition / boundary</th><th>Expected</th><th>Test method</th></tr>
+  <tr><td>TC-F01</td><td>−1</td><td>P1, boundary just below P2</td><td>throws</td><td><code>fee_belowLowerBoundary_ageMinus1_throws</code></td></tr>
+  <tr><td>TC-F02</td><td>−50</td><td>P1 interior, far from boundary</td><td>throws</td><td><code>fee_wellBelowRange_ageMinus50_throws</code></td></tr>
+  <tr><td>TC-F03</td><td>0</td><td>P2 lower boundary</td><td>CHILD, 100</td><td><code>fee_atLowerBoundaryOfChildBand_age0_is100</code></td></tr>
+  <tr><td>TC-F04</td><td>9</td><td>P2 interior</td><td>CHILD, 100</td><td><code>fee_withinChildBand_age9_is100</code></td></tr>
+  <tr><td>TC-F05</td><td>17</td><td>P2 upper boundary</td><td>CHILD, 100</td><td><code>fee_atUpperBoundaryOfChildBand_age17_is100</code></td></tr>
+  <tr><td>TC-F06</td><td>18</td><td>P3 lower boundary</td><td>ADULT, 250</td><td><code>fee_atLowerBoundaryOfAdultBand_age18_is250</code></td></tr>
+  <tr><td>TC-F07</td><td>40</td><td>P3 interior</td><td>ADULT, 250</td><td><code>fee_withinAdultBand_age40_is250</code></td></tr>
+  <tr><td>TC-F08</td><td>64</td><td>P3 upper boundary</td><td>ADULT, 250</td><td><code>fee_atUpperBoundaryOfAdultBand_age64_is250</code></td></tr>
+  <tr><td>TC-F09</td><td>65</td><td>P4 lower boundary</td><td>SENIOR, 150</td><td><code>fee_atLowerBoundaryOfSeniorBand_age65_is150</code></td></tr>
+  <tr><td>TC-F10</td><td>90</td><td>P4 interior</td><td>SENIOR, 150</td><td><code>fee_withinSeniorBand_age90_is150</code></td></tr>
+  <tr><td>TC-F11</td><td>120</td><td>P4 upper boundary</td><td>SENIOR, 150</td><td><code>fee_atUpperBoundaryOfSeniorBand_age120_is150</code></td></tr>
+  <tr><td>TC-F12</td><td>121</td><td>P5, boundary just above P4</td><td>throws</td><td><code>fee_aboveUpperBoundary_age121_throws</code></td></tr>
+  <tr><td>TC-F13</td><td>200</td><td>P5 interior, far from boundary</td><td>throws</td><td><code>fee_wellAboveRange_age200_throws</code></td></tr>
+</table>
+<p class="small">13 cases: 3 valid partitions × 3 (low boundary, interior representative, high
+boundary) = 9, plus 2 invalid partitions × 2 (edge value, far-out interior value) = 4.</p>
+
+<h2>2. Decision table — Rule 2 (booking eligibility)</h2>
+<p>Implemented in <code>core.BookingPolicy</code>. Three binary conditions, evaluated in strict
+priority order C1 → C2 → C3:</p>
+<ul>
+  <li><strong>C1</strong> — the requested slot is still free</li>
+  <li><strong>C2</strong> — the patient has no outstanding balance</li>
+  <li><strong>C3</strong> — the request is made at least 2 hours before the slot start time</li>
+</ul>
+
+<h3>2.1 Full table (2³ = 8 rules)</h3>
+<table class="data">
+  <tr><th class="center">Rule</th><th class="center">C1 free</th><th class="center">C2 no balance</th><th class="center">C3 notice ok</th><th>Action</th></tr>
+  <tr><td class="center">R1</td><td class="center no">F</td><td class="center">–</td><td class="center">–</td><td>Reject: SLOT_UNAVAILABLE</td></tr>
+  <tr><td class="center">R2</td><td class="center yes">T</td><td class="center no">F</td><td class="center">–</td><td>Reject: OUTSTANDING_BALANCE</td></tr>
+  <tr><td class="center">R3</td><td class="center yes">T</td><td class="center yes">T</td><td class="center no">F</td><td>Reject: INSUFFICIENT_NOTICE</td></tr>
+  <tr><td class="center">R4</td><td class="center yes">T</td><td class="center yes">T</td><td class="center yes">T</td><td>Approve — appointment created in REQUESTED</td></tr>
+</table>
+<p class="small">Because each condition is checked in priority order with an early return, the naive
+2³ = 8-row truth table collapses to 4 rules with "don't care" (–) columns for conditions a
+higher-priority rule already decided — the same shape the implementation itself has
+(<code>if (!c1) …; if (!c2) …; if (!c3) …; approve</code>).</p>
+
+<h3>2.2 Derived test cases</h3>
+<p>For every rule with a don't-care column, two tests are written — one with the don't-care
+condition true and one false — to prove the outcome genuinely does not depend on it (i.e. that the
+priority ordering really holds and a lower-priority condition can't override a higher one).
+Boundary value analysis is then applied separately to the one numeric condition, C3's 2-hour
+threshold.</p>
+<table class="data">
+  <tr><th>Case</th><th>C1</th><th>C2</th><th>C3 / notice given</th><th>Expected</th><th>Test method</th></tr>
+  <tr><td>TC-B01</td><td class="no">F</td><td class="yes">T</td><td>3h (T)</td><td>SLOT_UNAVAILABLE</td><td><code>decision_slotUnavailable_withGoodBalanceAndNotice_rejectsWithSlotUnavailable</code></td></tr>
+  <tr><td>TC-B02</td><td class="no">F</td><td class="no">F</td><td>30min (F)</td><td>SLOT_UNAVAILABLE (proves C1 outranks C2 and C3)</td><td><code>decision_slotUnavailable_withBadBalanceAndInsufficientNotice_stillRejectsWithSlotUnavailable</code></td></tr>
+  <tr><td>TC-B03</td><td class="yes">T</td><td class="no">F</td><td>3h (T)</td><td>OUTSTANDING_BALANCE</td><td><code>decision_outstandingBalance_withSufficientNotice_rejectsWithOutstandingBalance</code></td></tr>
+  <tr><td>TC-B04</td><td class="yes">T</td><td class="no">F</td><td>30min (F)</td><td>OUTSTANDING_BALANCE (proves C2 outranks C3)</td><td><code>decision_outstandingBalance_withInsufficientNotice_stillRejectsWithOutstandingBalance</code></td></tr>
+  <tr><td>TC-B05</td><td class="yes">T</td><td class="yes">T</td><td>30min (F)</td><td>INSUFFICIENT_NOTICE</td><td><code>decision_insufficientNotice_rejectsWithInsufficientNotice</code></td></tr>
+  <tr><td>TC-B06</td><td class="yes">T</td><td class="yes">T</td><td>3h (T)</td><td>Approved</td><td><code>decision_allConditionsTrue_approves</code></td></tr>
+</table>
+
+<h3>2.3 BVA on the C3 threshold (2-hour notice)</h3>
+<table class="data">
+  <tr><th>Case</th><th>Notice given</th><th>Boundary</th><th>Expected</th><th>Test method</th></tr>
+  <tr><td>TC-B07</td><td>exactly 2h00m</td><td>lower boundary of "sufficient"</td><td>Approved (≥ is inclusive)</td><td><code>notice_exactlyTwoHoursBeforeSlot_isSufficient_approves</code></td></tr>
+  <tr><td>TC-B08</td><td>1h59m (2h − 1min)</td><td>just below the boundary</td><td>INSUFFICIENT_NOTICE</td><td><code>notice_oneMinuteLessThanTwoHours_isInsufficient_rejects</code></td></tr>
+  <tr><td>TC-B09</td><td>10h</td><td>well above the boundary</td><td>Approved</td><td><code>notice_wellOverTwoHours_isSufficient_approves</code></td></tr>
+</table>
+
+<h2>3. State transition testing — Rule 3 (appointment lifecycle)</h2>
+<p>Implemented in <code>core.AppointmentStateMachine</code>. States:
+<code>REQUESTED, CONFIRMED, ATTENDED, CANCELLED, NO_SHOW</code>. Events:
+<code>CONFIRM, CANCEL, ATTEND, MARK_NO_SHOW</code>. 5 states × 4 events = 20 pairs.</p>
+
+<h3>3.1 State transition table</h3>
+<table class="data">
+  <tr><th>From \ Event</th><th class="center">CONFIRM</th><th class="center">CANCEL</th><th class="center">ATTEND</th><th class="center">MARK_NO_SHOW</th></tr>
+  <tr><td><strong>REQUESTED</strong></td><td class="center yes">→ CONFIRMED</td><td class="center yes">→ CANCELLED</td><td class="center no">invalid</td><td class="center no">invalid</td></tr>
+  <tr><td><strong>CONFIRMED</strong></td><td class="center no">invalid</td><td class="center yes">→ CANCELLED</td><td class="center yes">→ ATTENDED</td><td class="center yes">→ NO_SHOW</td></tr>
+  <tr><td><strong>ATTENDED</strong> (terminal)</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td></tr>
+  <tr><td><strong>CANCELLED</strong> (terminal)</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td></tr>
+  <tr><td><strong>NO_SHOW</strong> (terminal)</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td></tr>
+</table>
+<p class="small">5 valid transitions (shown in green), 15 invalid pairs (shown in red) — every event
+on a terminal state is invalid, and REQUESTED/CONFIRMED each reject the events not listed for them.</p>
+
+<h3>3.2 Derived test cases — valid transitions</h3>
+<table class="data">
+  <tr><th>Case</th><th>From</th><th>Event</th><th>Expected</th><th>Test method</th></tr>
+  <tr><td>TC-S01</td><td>REQUESTED</td><td>CONFIRM</td><td>CONFIRMED</td><td><code>transition_requestedConfirm_movesToConfirmed</code></td></tr>
+  <tr><td>TC-S02</td><td>REQUESTED</td><td>CANCEL</td><td>CANCELLED</td><td><code>transition_requestedCancel_movesToCancelled</code></td></tr>
+  <tr><td>TC-S03</td><td>CONFIRMED</td><td>ATTEND</td><td>ATTENDED</td><td><code>transition_confirmedAttend_movesToAttended</code></td></tr>
+  <tr><td>TC-S04</td><td>CONFIRMED</td><td>CANCEL</td><td>CANCELLED</td><td><code>transition_confirmedCancel_movesToCancelled</code></td></tr>
+  <tr><td>TC-S05</td><td>CONFIRMED</td><td>MARK_NO_SHOW</td><td>NO_SHOW</td><td><code>transition_confirmedMarkNoShow_movesToNoShow</code></td></tr>
+</table>
+
+<h3>3.3 Derived test cases — invalid transitions</h3>
+<p>Rather than hand-listing 15 rows (error-prone — easy to miss or duplicate a pair), the test
+generates <em>all</em> 20 state/event pairs and subtracts the 5 valid ones above, then runs a single
+parameterised test (<code>transition_invalidPair_throwsIllegalStateException</code>) once per
+remaining pair, asserting each throws <code>IllegalStateException</code>. A companion test
+(<code>invalidStateEventPairs_containsExactlyFifteenPairs</code>) asserts the generated set has
+exactly 15 members, so the count itself — not just each individual case — is under test. This
+guarantees full coverage of the invalid region of the table without the risk of a manually
+transcribed list silently missing a cell.</p>
+
+<h3>3.4 BVA — Rule 3b, late cancellation fee (24-hour guard)</h3>
+<p>A cancellation of a CONFIRMED appointment charges 50% of the consultation fee if made less than
+24 hours before the slot start, and nothing otherwise. This is a second, independent boundary
+layered on the CANCEL transition.</p>
+<table class="data">
+  <tr><th>Case</th><th>Time before slot</th><th>Boundary</th><th>Expected fee (on 250 ETB)</th><th>Test method</th></tr>
+  <tr><td>TC-S06</td><td>23h59m</td><td>just inside the late window</td><td>125.0 (50%)</td><td><code>lateCancellationFee_atTwentyThreeHours59Minutes_chargesHalfFee</code></td></tr>
+  <tr><td>TC-S07</td><td>exactly 24h00m</td><td>the boundary itself</td><td>0 (free — 24h is not "less than")</td><td><code>lateCancellationFee_atExactlyTwentyFourHours_isFree</code></td></tr>
+  <tr><td>TC-S08</td><td>24h01m</td><td>just outside the late window</td><td>0 (free)</td><td><code>lateCancellationFee_atTwentyFourHoursOneMinute_isFree</code></td></tr>
+</table>
+
+<h2>4. Summary</h2>
+<table class="data">
+  <tr><th>Technique</th><th>Applied to</th><th>Test cases derived</th></tr>
+  <tr><td>Equivalence partitioning + BVA</td><td>Rule 1 (fee by age)</td><td>13</td></tr>
+  <tr><td>Decision table + BVA</td><td>Rule 2 (booking eligibility)</td><td>9</td></tr>
+  <tr><td>State transition testing</td><td>Rule 3 (lifecycle) — 5 valid + 15 invalid</td><td>20 (5 explicit + 15 via one parameterised test + 1 count-check)</td></tr>
+  <tr><td>BVA</td><td>Rule 3b (late cancellation fee)</td><td>3</td></tr>
+  <tr><td><strong>Total, core rules alone</strong></td><td></td><td><strong>45 cases</strong> (across the 24 + 9 + 13 = 46 <code>@Test</code>/parameterised methods in the three <code>core/</code> test classes — the extra method is the 15-pairs count-check itself)</td></tr>
+</table>
+<p class="small">These 45–46 core-level cases are the ones designed directly from formal
+technique application. The remaining unit tests (<code>AppointmentServiceTest</code>, 12 methods)
+and all integration/system tests apply the same rules again through the orchestration and UI
+layers, and are counted separately in the test summary report's pyramid figures.</p>
+
+</body>
+</html>

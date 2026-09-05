@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Test Plan — Clinic Booking System</title>
+<style>
+  @page { margin: 22mm 18mm; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 11pt; line-height: 1.5; }
+  .titleblock { text-align: center; margin-bottom: 10mm; }
+  .titleblock .university { color: #555; font-size: 10pt; letter-spacing: 0.5px; }
+  .titleblock .course { color: #555; font-size: 10pt; margin-bottom: 6mm; }
+  .titleblock h1 { font-size: 22pt; margin: 2mm 0 1mm 0; color: #0b3d66; }
+  .titleblock .subtitle { font-size: 13pt; color: #333; margin-bottom: 6mm; }
+  table.meta { margin: 0 auto; border-collapse: collapse; font-size: 10pt; }
+  table.meta th { text-align: right; padding: 2px 8px; color: #555; font-weight: 600; }
+  table.meta td { text-align: left; padding: 2px 8px; }
+  h2 { color: #0b3d66; font-size: 14pt; border-bottom: 1.5px solid #0b3d66; padding-bottom: 2px; margin-top: 9mm; }
+  h3 { color: #0b3d66; font-size: 11.5pt; margin-top: 6mm; margin-bottom: 2mm; }
+  table.data { border-collapse: collapse; width: 100%; margin: 3mm 0; font-size: 10pt; }
+  table.data th, table.data td { border: 1px solid #ccc; padding: 4px 7px; text-align: left; vertical-align: top; }
+  table.data th { background: #eef4f9; color: #0b3d66; }
+  ul, ol { margin: 2mm 0; padding-left: 6mm; }
+  li { margin-bottom: 1.5mm; }
+  code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; font-family: "Courier New", monospace; font-size: 9.5pt; }
+  .note { background: #fff9e6; border-left: 3px solid #e0b400; padding: 2mm 4mm; font-size: 10pt; margin: 3mm 0; }
+  .small { font-size: 9.5pt; color: #555; }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<div class="titleblock">
+  <div class="university">Addis Ababa University — School of Information Technology and Engineering</div>
+  <div class="course">Software Testing and Validation — Final Project</div>
+  <h1>Test Plan</h1>
+  <div class="subtitle">Clinic Booking System</div>
+  <table class="meta">
+    <tr><th>Student</th><td>Biruk Mulatu</td></tr>
+    <tr><th>Student ID</th><td>[STUDENT ID — fill in before submission]</td></tr>
+    <tr><th>Instructor</th><td>Abel Tadesse</td></tr>
+    <tr><th>Date</th><td>4 September 2026</td></tr>
+    <tr><th>Group size</th><td>1 (solo submission)</td></tr>
+  </table>
+</div>
+
+<h2>1. Scope</h2>
+<p>This plan covers the testing effort for the Clinic Booking System, a small Spring Boot web
+application built as the vehicle for this course's testing techniques. Per the assignment brief,
+the application itself earns no marks; this document plans the testing of its business logic and
+user interface, not the addition of further features.</p>
+
+<h3>1.1 In scope</h3>
+<ul>
+  <li><strong>Rule 1 — consultation fee by age</strong> (<code>core.FeeCalculator</code>): three age
+      bands (CHILD, ADULT, SENIOR) plus rejection of out-of-range ages.</li>
+  <li><strong>Rule 2 — booking eligibility</strong> (<code>core.BookingPolicy</code>): a three-condition
+      decision table (slot free, no outstanding balance, ≥2 hours notice) evaluated in strict
+      priority order.</li>
+  <li><strong>Rule 3 — appointment lifecycle</strong> (<code>core.AppointmentStateMachine</code>): the
+      5-state, 4-event state machine and its 15 invalid transitions.</li>
+  <li><strong>Rule 3b — late cancellation fee</strong>: a 24-hour guard condition on top of the
+      CANCEL transition.</li>
+  <li>The orchestration layer (<code>AppointmentService</code>) that wires the three rules to
+      repositories, a <code>Clock</code>, and a notification service.</li>
+  <li>The web layer (login, slot list, booking form, confirmation, my-appointments) and the one
+      end-to-end user journey it supports.</li>
+  <li>Continuous integration (GitHub Actions and Jenkins) and the regression it is required to catch.</li>
+</ul>
+
+<h3>1.2 Out of scope</h3>
+<ul>
+  <li>Non-functional testing: load, performance, accessibility, security penetration testing.</li>
+  <li>Real SMS delivery — <code>NotificationService</code> has only a logging implementation, by
+      design (CLAUDE.md); no real gateway exists to test against.</li>
+  <li>Multi-user concurrency (two patients racing for the same slot at the same instant) — the
+      eligibility check (<code>C1</code>) is tested against the repository state at request time,
+      not under concurrent load.</li>
+  <li>Formal user acceptance testing (UAT) with real clinic staff — there is no such audience for a
+      course project; the Selenium system tests stand in for the acceptance level (see 2.1).</li>
+</ul>
+
+<h2>2. Approach</h2>
+
+<h3>2.1 Levels and techniques</h3>
+<p>The suite follows the test pyramid: many fast unit tests, fewer integration tests, a small number
+of system tests. Each level uses the technique(s) it is best suited to:</p>
+<table class="data">
+  <tr><th>Level</th><th>What it exercises</th><th>Formal techniques used</th></tr>
+  <tr><td>Unit</td><td><code>core/</code> pure functions, in isolation; <code>AppointmentService</code>
+      orchestration with all collaborators replaced by test doubles</td>
+      <td>Equivalence partitioning, boundary value analysis, decision table, state transition
+      testing (Part B of this project)</td></tr>
+  <tr><td>Integration</td><td><code>AppointmentService</code> + real Spring Data JPA repositories +
+      real H2 database; controllers via MockMvc (real HTTP request/response cycle, no browser)</td>
+      <td>Confirms the wiring and the repository queries behind the rules above actually work, not
+      just the boolean logic in isolation</td></tr>
+  <tr><td>System</td><td>The full booking journey through a real headless Chrome browser via
+      Selenium, using the Page Object pattern</td>
+      <td>End-to-end path testing of the one required user journey: log in → view slots → book →
+      see fee on confirmation → cancel</td></tr>
+</table>
+<p class="small">Acceptance-level testing is represented by the same Selenium journey: for a
+course project with no external stakeholder to run a separate UAT phase, the system test acting
+out the specified user journey (per the assignment's own example: "log in then place an order")
+is treated as the acceptance check that the application meets its use case.</p>
+
+<h3>2.2 Test doubles</h3>
+<p>The design deliberately builds in seams for all four test-double kinds the course requires:</p>
+<table class="data">
+  <tr><th>Kind</th><th>Where</th><th>What it replaces</th></tr>
+  <tr><td>Stub</td><td>A <code>Clock.fixed(...)</code> injected into <code>AppointmentService</code>
+      in unit tests</td><td>The system clock, so the 2-hour and 24-hour boundaries can be hit
+      exactly instead of racing real time</td></tr>
+  <tr><td>Mock</td><td>Mockito <code>@Mock NotificationService</code> in
+      <code>AppointmentServiceTest</code></td><td>The SMS-sending collaborator, so a confirmation
+      can be <code>verify()</code>-ed without sending one</td></tr>
+  <tr><td>Fake</td><td>The H2 in-memory database used by every <code>*IT</code> test</td>
+      <td>A production database — a real, working, but lightweight implementation</td></tr>
+  <tr><td>Spy</td><td><code>@SpyBean NotificationService</code> in
+      <code>AppointmentServiceIT</code></td><td>Wraps the real <code>LoggingNotificationService</code>
+      so calls can still be verified while the real logging behaviour still runs</td></tr>
+</table>
+
+<h3>2.3 Coverage target</h3>
+<p>At least 80% branch coverage of <code>et.aau.clinic.core</code>, enforced by a JaCoCo
+<code>check</code> rule so <code>mvn verify</code> fails the build if it regresses. See the
+coverage report for the actual figure achieved.</p>
+
+<h2>3. Entry and exit criteria</h2>
+<h3>3.1 Entry criteria (before a test level is considered ready to run)</h3>
+<ul>
+  <li>Unit level: the corresponding <code>core/</code> class or service method compiles and its
+      test-double seams (<code>Clock</code>, <code>NotificationService</code>) exist.</li>
+  <li>Integration level: unit tests for the same functionality are green; the Spring context
+      starts successfully under the <code>test</code> profile against H2.</li>
+  <li>System level: the application starts on a random port under <code>@SpringBootTest</code>;
+      the pages under test have the stable element <code>id</code> attributes Selenium locators
+      depend on.</li>
+</ul>
+<h3>3.2 Exit criteria (before the testing effort is considered complete)</h3>
+<ul>
+  <li><code>mvn clean verify</code> passes: all unit, integration and system tests green, in one run.</li>
+  <li>Branch coverage of <code>et.aau.clinic.core</code> is at least 80% (JaCoCo gate passing, not
+      just reported).</li>
+  <li>Every valid and invalid state transition in Rule 3's 5×4 grid has an explicit test.</li>
+  <li>Every boundary listed in this project's domain rules (ages −1, 0, 17, 18, 64, 65, 120, 121;
+      the 2-hour notice boundary; the 24-hour cancellation boundary) has an explicit test.</li>
+  <li>GitHub Actions is green on the current <code>main</code>, and the Jenkins pipeline has been
+      run at least once to a successful build via the provided Docker setup.</li>
+  <li>A regression has been deliberately introduced, observed failing in CI, and fixed, with both
+      runs recorded as evidence.</li>
+  <li>All defects found during the effort are logged with a status of Closed, or are explicitly
+      carried as residual risk in the test summary report.</li>
+</ul>
+
+<h2>4. Risk-based prioritisation</h2>
+<p>Priority is set by likely impact (mostly: does it produce a wrong fee, a wrong booking outcome,
+or a corrupted appointment state?) combined with how many conditions/branches the logic has to get
+right, since more branching means more ways to get it wrong.</p>
+<table class="data">
+  <tr><th>Priority</th><th>Area</th><th>Why</th></tr>
+  <tr><td><strong>P1 — highest</strong></td><td>Rule 2, booking eligibility decision table
+      (<code>BookingPolicy</code>)</td>
+      <td>Three conditions evaluated in a specific priority order; getting the order wrong
+      silently produces the wrong rejection reason or, worse, an approval that should have been
+      a rejection (e.g. double-booking a slot). Highest branch count of the three rules, and the
+      one most directly tied to correctness of a scheduling system.</td></tr>
+  <tr><td><strong>P1 — highest</strong></td><td>Rule 1, fee boundaries
+      (<code>FeeCalculator</code>)</td>
+      <td>Directly affects money charged to a patient. A one-line boundary slip (as demonstrated
+      in the regression, see <code>docs/regression-demo.md</code>) silently over- or under-charges
+      real people — exactly the kind of defect BVA exists to catch, and exactly what happened when
+      it was deliberately introduced.</td></tr>
+  <tr><td><strong>P2 — high</strong></td><td>Rule 3, state machine invalid transitions</td>
+      <td>Data-integrity risk: an appointment that can be re-confirmed after cancellation, or
+      attended twice, corrupts clinic records. 15 of 20 state/event pairs must be rejected, so the
+      chance of missing one is real without a systematic (not hand-picked) test list.</td></tr>
+  <tr><td><strong>P2 — high</strong></td><td>Rule 3b, late cancellation fee boundary</td>
+      <td>A second, independent financial boundary (24 hours) layered on top of a valid CANCEL
+      transition; easy to get an off-by-one on <code>&lt;</code> vs <code>&le;</code> here exactly
+      as happened (deliberately) with Rule 1.</td></tr>
+  <tr><td><strong>P3 — medium</strong></td><td>End-to-end web journey (login → book → confirm →
+      cancel)</td>
+      <td>Lower branch complexity than the rules above, but the only place a wiring mistake
+      (wrong view name, wrong redirect, wrong model attribute) would actually surface to a user —
+      the integration and system tests exist specifically to catch that class of bug.</td></tr>
+  <tr><td><strong>P4 — lower</strong></td><td>Static/read-only pages, login failure messaging</td>
+      <td>Few branches, low financial/data-integrity impact if imperfect; still covered, but not
+      where test effort concentrates.</td></tr>
+</table>
+
+<h2>5. Schedule</h2>
+<p>Real dates for this solo project (compressed relative to the assignment's suggested three-week
+plan since the code phases were completed ahead of the documentation):</p>
+<table class="data">
+  <tr><th>Date</th><th>Milestone</th></tr>
+  <tr><td>2026-08-30 (morning)</td><td>Phases 1–6: domain, core rules with unit tests, service
+      layer, controllers, integration tests</td></tr>
+  <tr><td>2026-08-30 (afternoon)</td><td>Phases 7–8: Selenium system tests, GitHub Actions,
+      Jenkinsfile</td></tr>
+  <tr><td>2026-08-30 (evening)</td><td>Deliberate regression demo run and caught in CI;
+      DEF-002 found and fixed</td></tr>
+  <tr><td>2026-08-30 (late)</td><td>Jenkins pipeline verified end-to-end against the Docker setup;
+      DEF-003 found and fixed</td></tr>
+  <tr><td>2026-09-04</td><td>This test plan and the remaining three PDF deliverables (test design,
+      defect log + metrics, test summary + reflection) written up from the evidence above</td></tr>
+  <tr><td>By 2026-09-13</td><td>Submission deadline — repository link and four PDFs on Google
+      Classroom</td></tr>
+</table>
+
+<h2>6. Roles</h2>
+<p>This is a solo submission (group size 1). One student carried out every role the assignment
+would otherwise distribute across a group of up to four:</p>
+<table class="data">
+  <tr><th>Role</th><th>Responsibility</th><th>Owner</th></tr>
+  <tr><td>Developer</td><td>Application code: domain, core rules, service layer, web layer</td>
+      <td>Biruk Mulatu</td></tr>
+  <tr><td>Test designer</td><td>Deriving EP/BVA/decision-table/state-transition test cases (Part B)</td>
+      <td>Biruk Mulatu</td></tr>
+  <tr><td>Test automation engineer</td><td>Writing and maintaining the unit, integration and
+      Selenium suites</td><td>Biruk Mulatu</td></tr>
+  <tr><td>CI/DevOps</td><td>GitHub Actions workflow, Jenkinsfile and Docker setup, regression demo</td>
+      <td>Biruk Mulatu</td></tr>
+  <tr><td>Defect/quality manager</td><td>Defect log, metrics, coverage reporting, this test plan</td>
+      <td>Biruk Mulatu</td></tr>
+</table>
+
+</body>
+</html>
