@@ -215,6 +215,68 @@ class AppointmentServiceTest {
     }
 
     @Test
+    void bookForPatient_freeSlot_createsConfirmedAppointmentAndSendsSms() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusMinutes(30)); // inside the 2h window: reception may override C3
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingOutcome outcome = service.bookForPatient(1L, 2L);
+
+        assertThat(outcome.decision().isApproved()).isTrue();
+        assertThat(outcome.appointment().getStatus()).isEqualTo(AppointmentStatus.CONFIRMED);
+        assertThat(outcome.appointment().getFeeAmount()).isEqualByComparingTo(new BigDecimal("250"));
+        verify(notificationService).sendConfirmation(eq(patient), any(Appointment.class));
+    }
+
+    @Test
+    void bookForPatient_outstandingBalanceAndShortNotice_stillBooks_receptionOverridesC2AndC3() {
+        Patient patient = adultPatient();
+        patient.setOutstandingBalance(new BigDecimal("500"));
+        Slot slot = new Slot(FIXED_NOW.plusMinutes(15));
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingOutcome outcome = service.bookForPatient(1L, 2L);
+
+        assertThat(outcome.decision().isApproved()).isTrue();
+        assertThat(outcome.appointment().getStatus()).isEqualTo(AppointmentStatus.CONFIRMED);
+    }
+
+    @Test
+    void bookForPatient_slotAlreadyTaken_rejectsWithSlotUnavailableAndSavesNothing() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusHours(3));
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(true);
+
+        BookingOutcome outcome = service.bookForPatient(1L, 2L);
+
+        assertThat(outcome.decision().isApproved()).isFalse();
+        assertThat(outcome.decision().getReason()).isEqualTo(RejectionReason.SLOT_UNAVAILABLE);
+        assertThat(outcome.appointment()).isNull();
+        verify(appointmentRepository, never()).save(any());
+        verify(notificationService, never()).sendConfirmation(any(), any());
+    }
+
+    @Test
+    void listUpcomingSlots_includesTakenSlots_butNotPastOnes() {
+        Slot future = new Slot(FIXED_NOW.plusHours(5));
+        Slot taken = new Slot(FIXED_NOW.plusHours(6));
+        Slot past = new Slot(FIXED_NOW.minusHours(1));
+        when(slotRepository.findAllByOrderByStartTimeAsc()).thenReturn(List.of(future, taken, past));
+
+        List<Slot> upcoming = service.listUpcomingSlots();
+
+        assertThat(upcoming).containsExactly(future, taken);
+    }
+
+    @Test
     void listAvailableSlots_excludesTakenAndPastSlots() {
         Slot future = new Slot(FIXED_NOW.plusHours(5));
         Slot taken = new Slot(FIXED_NOW.plusHours(6));

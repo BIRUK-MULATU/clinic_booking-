@@ -9,6 +9,7 @@ import et.aau.clinic.core.FeeCalculator;
 import et.aau.clinic.domain.Appointment;
 import et.aau.clinic.domain.AppointmentStatus;
 import et.aau.clinic.domain.Patient;
+import et.aau.clinic.domain.RejectionReason;
 import et.aau.clinic.domain.Slot;
 import et.aau.clinic.repository.AppointmentRepository;
 import et.aau.clinic.repository.PatientRepository;
@@ -65,6 +66,21 @@ public class AppointmentService {
                 .toList();
     }
 
+    /**
+     * Every future slot, taken or not - the admin's slot-management view, as opposed to
+     * listAvailableSlots() which is what a patient sees when choosing one to book.
+     */
+    public List<Slot> listUpcomingSlots() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        return slotRepository.findAllByOrderByStartTimeAsc().stream()
+                .filter(slot -> slot.getStartTime().isAfter(now))
+                .toList();
+    }
+
+    public boolean slotIsTaken(Slot slot) {
+        return appointmentRepository.existsBySlotAndStatusIn(slot, ACTIVE_STATUSES);
+    }
+
     public Slot getSlot(Long slotId) {
         return slotRepository.findById(slotId).orElseThrow();
     }
@@ -98,6 +114,34 @@ public class AppointmentService {
                 patient, slot, AppointmentStatus.REQUESTED, fee.category(), fee.amount(), now);
         Appointment saved = appointmentRepository.save(appointment);
         return new BookingOutcome(decision, saved);
+    }
+
+    /**
+     * Hospital-expansion: reception books an appointment directly onto a patient, rather
+     * than the patient requesting it themselves. Only C1 (the slot is still free) is
+     * enforced - reception is deliberately allowed to override C2 (outstanding balance)
+     * and C3 (2-hour notice), which exist to gate self-service booking, not a front-desk
+     * booking made in person. The appointment is created straight in CONFIRMED (reception
+     * has no reason to confirm its own booking) and the confirmation SMS is sent, exactly
+     * as confirm() would.
+     */
+    public BookingOutcome bookForPatient(Long patientId, Long slotId) {
+        Patient patient = patientRepository.findById(patientId).orElseThrow();
+        Slot slot = slotRepository.findById(slotId).orElseThrow();
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        if (slotIsTaken(slot)) {
+            return new BookingOutcome(BookingDecision.reject(RejectionReason.SLOT_UNAVAILABLE), null);
+        }
+
+        int age = Period.between(patient.getDateOfBirth(), now.toLocalDate()).getYears();
+        Fee fee = FeeCalculator.calculate(age);
+
+        Appointment appointment = new Appointment(
+                patient, slot, AppointmentStatus.CONFIRMED, fee.category(), fee.amount(), now);
+        Appointment saved = appointmentRepository.save(appointment);
+        notificationService.sendConfirmation(saved.getPatient(), saved);
+        return new BookingOutcome(BookingDecision.approve(), saved);
     }
 
     /**

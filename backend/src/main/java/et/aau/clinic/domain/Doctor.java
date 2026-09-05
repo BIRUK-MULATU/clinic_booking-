@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 
 /**
@@ -31,6 +32,16 @@ public class Doctor {
     @ManyToOne(optional = false)
     @JoinColumn(nullable = false)
     private Department department;
+
+    /**
+     * The doctor's photo as a data URL ("data:image/jpeg;base64,...") uploaded from the
+     * admin's device. Stored inline rather than as a file on disk: H2 here is in-memory
+     * and thrown away on restart, so there is nothing a filesystem copy would add.
+     * Nullable - a doctor without a photo just renders a placeholder.
+     */
+    @Lob
+    @Column
+    private String photo;
 
     protected Doctor() {
         // required by JPA
@@ -68,5 +79,13 @@ public class Doctor {
 
     public void setDepartment(Department department) {
         this.department = department;
+    }
+
+    public String getPhoto() {
+        return photo;
+    }
+
+    public void setPhoto(String photo) {
+        this.photo = photo;
     }
 }

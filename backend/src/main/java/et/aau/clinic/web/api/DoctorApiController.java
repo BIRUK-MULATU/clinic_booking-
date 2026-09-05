@@ -11,6 +11,7 @@ import et.aau.clinic.web.api.dto.AvailabilityRuleRequest;
 import et.aau.clinic.web.api.dto.AvailabilityRuleResponse;
 import et.aau.clinic.web.api.dto.DepartmentRequest;
 import et.aau.clinic.web.api.dto.DepartmentResponse;
+import et.aau.clinic.web.api.dto.DoctorPhotoRequest;
 import et.aau.clinic.web.api.dto.DoctorRequest;
 import et.aau.clinic.web.api.dto.DoctorResponse;
 import et.aau.clinic.web.api.dto.ErrorResponse;
@@ -21,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,6 +34,10 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 public class DoctorApiController {
+
+    // A data URL for a lightly-compressed headshot is well under this; the cap only
+    // exists to stop someone pasting a multi-megabyte original straight into the DB.
+    private static final int MAX_PHOTO_CHARS = 1_400_000;
 
     private final DoctorRepository doctorRepository;
     private final DepartmentRepository departmentRepository;
@@ -57,7 +63,9 @@ public class DoctorApiController {
         if (denied != null) {
             return denied;
         }
-        return ResponseEntity.ok(doctorRepository.findAll().stream().map(DoctorResponse::from).toList());
+        return ResponseEntity.ok(doctorRepository.findAll().stream()
+                .map(doctor -> DoctorResponse.from(doctor, availabilityRepository.findByDoctor(doctor)))
+                .toList());
     }
 
     @PostMapping("/api/doctors")
@@ -66,9 +74,32 @@ public class DoctorApiController {
         if (denied != null) {
             return denied;
         }
+        String photoError = validatePhoto(request.photo());
+        if (photoError != null) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(photoError));
+        }
         Department department = departmentRepository.findById(request.departmentId()).orElseThrow();
-        Doctor saved = doctorRepository.save(new Doctor(request.name(), request.specialty(), department));
-        return ResponseEntity.status(201).body(DoctorResponse.from(saved));
+        Doctor doctor = new Doctor(request.name(), request.specialty(), department);
+        doctor.setPhoto(emptyToNull(request.photo()));
+        Doctor saved = doctorRepository.save(doctor);
+        return ResponseEntity.status(201).body(DoctorResponse.from(saved, availabilityRepository.findByDoctor(saved)));
+    }
+
+    @PutMapping("/api/doctors/{id}/photo")
+    public ResponseEntity<?> setPhoto(@PathVariable Long id, @RequestBody DoctorPhotoRequest request,
+                                      HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        String photoError = validatePhoto(request.photo());
+        if (photoError != null) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(photoError));
+        }
+        Doctor doctor = doctorRepository.findById(id).orElseThrow();
+        doctor.setPhoto(emptyToNull(request.photo()));
+        Doctor saved = doctorRepository.save(doctor);
+        return ResponseEntity.ok(DoctorResponse.from(saved, availabilityRepository.findByDoctor(saved)));
     }
 
     @GetMapping("/api/departments")
@@ -137,6 +168,25 @@ public class DoctorApiController {
         Doctor doctor = doctorRepository.findById(id).orElseThrow();
         var saved = availabilityService.addException(doctor, request.date());
         return ResponseEntity.status(201).body(ExceptionDateResponse.from(saved));
+    }
+
+    // Returns an error message if the photo is present but unusable, or null if it is
+    // absent (fine) or a plausible image data URL within the size cap.
+    private static String validatePhoto(String photo) {
+        if (photo == null || photo.trim().isEmpty()) {
+            return null;
+        }
+        if (!photo.startsWith("data:image/")) {
+            return "Photo must be an image file.";
+        }
+        if (photo.length() > MAX_PHOTO_CHARS) {
+            return "That image is too large - please use a smaller photo.";
+        }
+        return null;
+    }
+
+    private static String emptyToNull(String value) {
+        return value == null || value.trim().isEmpty() ? null : value;
     }
 
     private ResponseEntity<ErrorResponse> requireAdmin(HttpSession session) {
