@@ -17,18 +17,21 @@ import static et.aau.clinic.core.AppointmentEvent.ATTEND;
 import static et.aau.clinic.core.AppointmentEvent.CANCEL;
 import static et.aau.clinic.core.AppointmentEvent.CONFIRM;
 import static et.aau.clinic.core.AppointmentEvent.MARK_NO_SHOW;
+import static et.aau.clinic.core.AppointmentEvent.PROMOTE;
 import static et.aau.clinic.domain.AppointmentStatus.ATTENDED;
 import static et.aau.clinic.domain.AppointmentStatus.CANCELLED;
 import static et.aau.clinic.domain.AppointmentStatus.CONFIRMED;
 import static et.aau.clinic.domain.AppointmentStatus.NO_SHOW;
 import static et.aau.clinic.domain.AppointmentStatus.REQUESTED;
+import static et.aau.clinic.domain.AppointmentStatus.WAITLISTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Rule 3 - state transition testing over the 5 states x 4 events grid
- * (20 pairs: 5 valid, 15 invalid), plus Rule 3b's late-cancellation
- * fee, a guard condition tested with its own BVA on the 24-hour mark.
+ * Rule 3 - state transition testing over the 6 states x 5 events grid
+ * (30 pairs: 7 valid, 23 invalid) after hospital-expansion Phase C added
+ * WAITLISTED and PROMOTE, plus Rule 3b's late-cancellation fee, a guard
+ * condition tested with its own BVA on the 24-hour mark.
  */
 class AppointmentStateMachineTest {
 
@@ -64,8 +67,22 @@ class AppointmentStateMachineTest {
         assertThat(AppointmentStateMachine.transition(CONFIRMED, MARK_NO_SHOW)).isEqualTo(NO_SHOW);
     }
 
-    // State transition table: covers all 15 invalid (state, event) pairs - the full grid
-    // (20 pairs) minus the 5 valid transitions TC-S01-TC-S05 cover above.
+    // TC-S09 - Hospital-expansion Phase C, state transition table: WAITLISTED --promote-->
+    // REQUESTED (valid) - the slot freed up and this appointment moves off the waitlist.
+    @Test
+    void transition_waitlistedPromote_movesToRequested() {
+        assertThat(AppointmentStateMachine.transition(WAITLISTED, PROMOTE)).isEqualTo(REQUESTED);
+    }
+
+    // TC-S10 - Hospital-expansion Phase C, state transition table: WAITLISTED --cancel-->
+    // CANCELLED (valid) - a patient can leave the waitlist without ever being promoted.
+    @Test
+    void transition_waitlistedCancel_movesToCancelled() {
+        assertThat(AppointmentStateMachine.transition(WAITLISTED, CANCEL)).isEqualTo(CANCELLED);
+    }
+
+    // State transition table: covers all 23 invalid (state, event) pairs - the full 6x5 grid
+    // (30 pairs) minus the 7 valid transitions TC-S01-TC-S05, TC-S09, TC-S10 cover above.
     @ParameterizedTest(name = "{index}: {0} + {1} is invalid")
     @MethodSource("invalidStateEventPairs")
     void transition_invalidPair_throwsIllegalStateException(AppointmentStatus state, AppointmentEvent event) {
@@ -74,10 +91,12 @@ class AppointmentStateMachineTest {
     }
 
     /**
-     * State transition table: data source for the 15 invalid pairs above.
-     * All 20 state/event pairs minus the 5 valid ones from CLAUDE.md's
-     * table, generated rather than hand-listed so the count (15) is
-     * enforced by the grid itself, not by hand-copying.
+     * State transition table: data source for the 23 invalid pairs above.
+     * All 30 state/event pairs (6 states x 5 events, after hospital-
+     * expansion Phase C added WAITLISTED and PROMOTE) minus the 7 valid
+     * ones - 5 from CLAUDE.md's original table plus the 2 Phase C added -
+     * generated rather than hand-listed so the count (23) is enforced by
+     * the grid itself, not by hand-copying.
      */
     static Stream<Arguments> invalidStateEventPairs() {
         record Valid(AppointmentStatus state, AppointmentEvent event) {
@@ -87,7 +106,9 @@ class AppointmentStateMachineTest {
                 new Valid(REQUESTED, CANCEL),
                 new Valid(CONFIRMED, ATTEND),
                 new Valid(CONFIRMED, CANCEL),
-                new Valid(CONFIRMED, MARK_NO_SHOW)
+                new Valid(CONFIRMED, MARK_NO_SHOW),
+                new Valid(WAITLISTED, PROMOTE),
+                new Valid(WAITLISTED, CANCEL)
         ).toList();
 
         return EnumSet.allOf(AppointmentStatus.class).stream()
@@ -98,11 +119,26 @@ class AppointmentStateMachineTest {
     }
 
     // Meta-check on the state transition table itself, not a technique-derived case: asserts
-    // the generated invalid set has exactly 15 members (20 pairs - the 5 valid transitions),
-    // so a future edit to the grid can't silently drop or duplicate a pair.
+    // the generated invalid set has exactly 23 members, so a future edit to the grid can't
+    // silently drop or duplicate a pair.
+    //
+    // Hand-derivation, 15 -> 23 (hospital-expansion Phase C added WAITLISTED and PROMOTE):
+    // the grid doesn't grow by addition, it grows by area. One new state adds a full new
+    // ROW (5 cells: WAITLISTED x each of the 5 events); one new event adds a full new
+    // COLUMN (6 cells: PROMOTE x each of the 6 states); they overlap at exactly one cell
+    // (WAITLISTED x PROMOTE). New cells = 5 + 6 - 1 = 10, decomposed as:
+    //   - old 5 states x new PROMOTE column (5 cells): all invalid - PROMOTE only ever
+    //     makes sense from WAITLISTED.
+    //   - new WAITLISTED row x old 4 events (4 cells): CANCEL valid, CONFIRM/ATTEND/
+    //     MARK_NO_SHOW invalid (3 invalid, 1 valid).
+    //   - the 1 overlap cell, WAITLISTED x PROMOTE: valid.
+    // Of the 10 new cells: 2 valid (WAITLISTED+PROMOTE, WAITLISTED+CANCEL), 8 invalid
+    // (5 + 3 above). The original 15 invalid pairs are untouched (the original 5x4 block
+    // is unchanged), so invalid = 15 + 8 = 23. Sanity check: valid = 5 + 2 = 7,
+    // 7 + 23 = 30 = 6 x 5. Both totals agree.
     @Test
-    void invalidStateEventPairs_containsExactlyFifteenPairs() {
-        assertThat(invalidStateEventPairs().count()).isEqualTo(15);
+    void invalidStateEventPairs_containsExactlyTwentyThreePairs() {
+        assertThat(invalidStateEventPairs().count()).isEqualTo(23);
     }
 
     // TC-S06 - BVA on Rule 3b's 24h guard: just inside the late window (23h59m).
