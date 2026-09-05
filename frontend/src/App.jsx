@@ -9,6 +9,7 @@ import MyAppointmentsPage from "./pages/MyAppointmentsPage";
 import DoctorsPage from "./pages/DoctorsPage";
 import AvailabilityPage from "./pages/AvailabilityPage";
 import QueuePage from "./pages/QueuePage";
+import VisitRecordPage from "./pages/VisitRecordPage";
 import { useAuth } from "./context/AuthContext";
 
 function HomeRedirect() {
@@ -76,6 +77,14 @@ export default function App() {
           element={
             <ProtectedRoute role="ADMIN">
               <QueuePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/appointments/:appointmentId/visit-record"
+          element={
+            <ProtectedRoute role="ADMIN">
+              <VisitRecordPage />
             </ProtectedRoute>
           }
         />

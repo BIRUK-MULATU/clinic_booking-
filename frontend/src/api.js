@@ -51,10 +51,31 @@ export const api = {
 
   // Reception's day roster: everyone expected on a given date, checked in or not.
   adminAppointments: (date) => request(`/admin/appointments${date ? `?date=${date}` : ""}`),
+
+  // Hospital-expansion Phase E: the visit record for one appointment. The GET 404s
+  // when nothing has been recorded yet, which is a normal state, not an error - so
+  // it is caught here and returned as ok:false rather than thrown.
+  visitRecord: async (appointmentId) => {
+    try {
+      return await request(`/appointments/${appointmentId}/visit-record`);
+    } catch {
+      return { ok: false, status: 404, data: null };
+    }
+  },
+  addVisitRecord: (appointmentId, body) =>
+    request(`/appointments/${appointmentId}/visit-record`, { method: "POST", body: JSON.stringify(body) }),
 };
 
 export const REJECTION_MESSAGES = {
   SLOT_UNAVAILABLE: "That slot has just been taken. Please pick another one.",
   OUTSTANDING_BALANCE: "You have an outstanding balance and cannot book until it is settled.",
   INSUFFICIENT_NOTICE: "Bookings need at least 2 hours' notice before the slot time.",
+};
+
+// Hospital-expansion Phase E: why VisitRecordPolicy refused to record a visit.
+export const VISIT_REJECTION_MESSAGES = {
+  APPOINTMENT_NOT_ATTENDED: "A visit can only be recorded once the appointment has been attended.",
+  VISIT_ALREADY_RECORDED: "This visit has already been recorded.",
+  DIAGNOSIS_REQUIRED: "A diagnosis is required.",
+  DIAGNOSIS_TOO_LONG: "The diagnosis is too long (500 characters maximum).",
 };

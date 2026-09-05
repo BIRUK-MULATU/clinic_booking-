@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 import { formatMoney, formatSlot } from "../utils";
 
@@ -166,6 +167,15 @@ export default function QueuePage() {
                 >
                   Confirm
                 </button>
+              )}
+              {appt.status === "ATTENDED" && (
+                <Link
+                  className="btn btn-secondary btn-sm"
+                  id={`roster-visit-record-${appt.id}`}
+                  to={`/appointments/${appt.id}/visit-record`}
+                >
+                  Visit Record
+                </Link>
               )}
             </div>
           </div>
