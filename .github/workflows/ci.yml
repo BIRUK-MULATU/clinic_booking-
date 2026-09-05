@@ -7,6 +7,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,6 +20,7 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+          cache-dependency-path: backend/pom.xml
 
       # ubuntu-latest ships Google Chrome already; Selenium Manager
       # finds it on its own, so no extra browser install step is needed.
@@ -62,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
-          path: target/site/jacoco/
+          path: backend/target/site/jacoco/
 
       - name: Upload test reports
         if: always()
@@ -70,5 +74,5 @@ jobs:
         with:
           name: test-reports
           path: |
-            target/surefire-reports/
-            target/failsafe-reports/
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/

@@ -12,15 +12,19 @@ pipeline {
             steps {
                 // Runs the whole pyramid - unit, integration, system -
                 // plus the 80% branch coverage gate on et.aau.clinic.core.
-                sh 'mvn --batch-mode clean verify'
+                // The Maven project lives under backend/ (frontend/ is a
+                // separate, ungraded React UI with no Maven build step).
+                dir('backend') {
+                    sh 'mvn --batch-mode clean verify'
+                }
             }
         }
     }
 
     post {
         always {
-            junit testResults: 'target/surefire-reports/*.xml,target/failsafe-reports/*.xml', allowEmptyResults: true
-            archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
+            junit testResults: 'backend/target/surefire-reports/*.xml,backend/target/failsafe-reports/*.xml', allowEmptyResults: true
+            archiveArtifacts artifacts: 'backend/target/site/jacoco/**', allowEmptyArchive: true
         }
     }
 }
