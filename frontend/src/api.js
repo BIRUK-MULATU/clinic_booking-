@@ -33,6 +33,9 @@ export const api = {
 
   // Hospital-expansion Phase A/B: doctors and their availability.
   doctors: () => request("/doctors"),
+  addDoctor: (doctor) => request("/doctors", { method: "POST", body: JSON.stringify(doctor) }),
+  departments: () => request("/departments"),
+  addDepartment: (name) => request("/departments", { method: "POST", body: JSON.stringify({ name }) }),
   doctorAvailability: (doctorId) => request(`/doctors/${doctorId}/availability`),
   addAvailabilityRule: (doctorId, rule) =>
     request(`/doctors/${doctorId}/availability`, { method: "POST", body: JSON.stringify(rule) }),
