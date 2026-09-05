@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { formatMoney, formatSlot } from "../utils";
@@ -16,42 +16,53 @@ function today() {
 }
 
 export default function QueuePage() {
+  const [pending, setPending] = useState(null);
   const [entries, setEntries] = useState(null);
+  const [roster, setRoster] = useState(null);
+  const [date, setDate] = useState(today());
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
 
-  const [date, setDate] = useState(today());
-  const [roster, setRoster] = useState(null);
-  const [rosterError, setRosterError] = useState("");
-  const [rosterBusyId, setRosterBusyId] = useState(null);
+  const loadPending = useCallback(() => {
+    api
+      .pendingAppointments()
+      .then(({ ok, data }) => ok && setPending(data))
+      .catch(() => setError("Could not reach the server."));
+  }, []);
 
-  function load() {
+  const loadQueue = useCallback(() => {
     api
       .queue()
-      .then(({ ok, data }) => (ok ? setEntries(data) : setError("Could not load the queue.")))
+      .then(({ ok, data }) => ok && setEntries(data))
       .catch(() => setError("Could not reach the server."));
-  }
+  }, []);
 
-  function loadRoster() {
+  const loadRoster = useCallback(() => {
     api
       .adminAppointments(date)
-      .then(({ ok, data }) => (ok ? setRoster(data) : setRosterError("Could not load today's appointments.")))
-      .catch(() => setRosterError("Could not reach the server."));
-  }
+      .then(({ ok, data }) => ok && setRoster(data))
+      .catch(() => setError("Could not reach the server."));
+  }, [date]);
 
-  useEffect(load, []);
-  useEffect(loadRoster, [date]);
+  useEffect(loadPending, [loadPending]);
+  useEffect(loadQueue, [loadQueue]);
+  useEffect(loadRoster, [loadRoster]);
 
-  async function advance(entryId, action) {
-    setBusyId(entryId);
+  // One helper for every button on this page: call the API, surface a failure, then
+  // refresh all three lists since a single action (confirm, check in, complete) can
+  // move an appointment between them.
+  async function run(id, action) {
+    setBusyId(id);
     setError("");
     try {
-      const { ok, data } = await action(entryId);
+      const { ok, data } = await action(id);
       if (!ok) {
         setError(data?.message || "That action could not be completed.");
         return;
       }
-      load();
+      loadPending();
+      loadQueue();
+      loadRoster();
     } catch {
       setError("That action could not be completed.");
     } finally {
@@ -59,31 +70,60 @@ export default function QueuePage() {
     }
   }
 
-  async function confirmAppointment(appointmentId) {
-    setRosterBusyId(appointmentId);
-    setRosterError("");
-    try {
-      const { ok, data } = await api.confirm(appointmentId);
-      if (!ok) {
-        setRosterError(data?.message || "That appointment could not be confirmed.");
-        return;
-      }
-      loadRoster();
-    } catch {
-      setRosterError("Could not reach the server.");
-    } finally {
-      setRosterBusyId(null);
-    }
-  }
-
   return (
     <div className="page" id="queue-page">
       <div className="page-header">
-        <h1 id="page-title">Queue</h1>
-        <p>Hospital-expansion Phase D — every checked-in patient not yet seen, oldest first.</p>
+        <h1 id="page-title">Reception</h1>
+        <p>Confirm requested appointments, check patients in, and run the day's queue.</p>
       </div>
 
       {error && <p className="alert alert-error">{error}</p>}
+
+      <div className="page-header" style={{ marginTop: 8 }}>
+        <h2 id="pending-title">Requests awaiting confirmation</h2>
+        <p>Every appointment a patient has requested, any date, soonest first. Confirm to hold the slot.</p>
+      </div>
+
+      {pending?.length === 0 && (
+        <div className="card empty-state" id="no-pending-message">
+          <div className="icon">✅</div>
+          No requests waiting.
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }} id="pending-table">
+        {pending?.map((appt) => (
+          <div className="card appointment-card" id={`pending-row-${appt.id}`} key={appt.id}>
+            <div className="appointment-info">
+              <span style={{ fontWeight: 700 }}>{appt.patientName}</span>
+              <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                {formatSlot(appt.slotStartTime).raw}
+              </span>
+              <span className={`status-pill status-${appt.status}`} id={`pending-status-${appt.id}`}>
+                {appt.status}
+              </span>
+              <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                Fee: {formatMoney(appt.feeAmount)}
+              </span>
+            </div>
+            <div className="appointment-actions">
+              <button
+                className="btn btn-primary btn-sm"
+                id={`pending-confirm-${appt.id}`}
+                disabled={busyId === appt.id}
+                onClick={() => run(appt.id, api.confirm)}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="page-header" style={{ marginTop: 36 }}>
+        <h2 id="queue-title">Live queue</h2>
+        <p>Every checked-in patient not yet seen, oldest check-in first.</p>
+      </div>
 
       {entries?.length === 0 && (
         <div className="card empty-state" id="no-queue-entries-message">
@@ -112,7 +152,7 @@ export default function QueuePage() {
                     className="btn btn-secondary btn-sm"
                     id={`queue-advance-${entry.id}`}
                     disabled={busyId === entry.id}
-                    onClick={() => advance(entry.id, next.fn)}
+                    onClick={() => run(entry.id, next.fn)}
                   >
                     {next.label}
                   </button>
@@ -124,7 +164,7 @@ export default function QueuePage() {
       </div>
 
       <div className="page-header" style={{ marginTop: 36 }}>
-        <h2 id="roster-title">Today's Appointments</h2>
+        <h2 id="roster-title">Appointments by date</h2>
         <p>Every patient expected on the chosen date, in slot order — checked in or not yet.</p>
       </div>
 
@@ -132,8 +172,6 @@ export default function QueuePage() {
         <label htmlFor="roster-date">Date</label>
         <input id="roster-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
-
-      {rosterError && <p className="alert alert-error">{rosterError}</p>}
 
       {roster?.length === 0 && (
         <div className="card empty-state" id="no-roster-message">
@@ -162,10 +200,20 @@ export default function QueuePage() {
                 <button
                   className="btn btn-secondary btn-sm"
                   id={`roster-confirm-${appt.id}`}
-                  disabled={rosterBusyId === appt.id}
-                  onClick={() => confirmAppointment(appt.id)}
+                  disabled={busyId === appt.id}
+                  onClick={() => run(appt.id, api.confirm)}
                 >
                   Confirm
+                </button>
+              )}
+              {appt.status === "CONFIRMED" && (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  id={`roster-check-in-${appt.id}`}
+                  disabled={busyId === appt.id}
+                  onClick={() => run(appt.id, api.checkIn)}
+                >
+                  Check In
                 </button>
               )}
               {appt.status === "ATTENDED" && (

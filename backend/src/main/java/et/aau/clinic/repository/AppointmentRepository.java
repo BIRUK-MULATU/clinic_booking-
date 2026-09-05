@@ -22,4 +22,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     // The reception day-roster: every appointment whose slot falls within a day, earliest first.
     List<Appointment> findBySlot_StartTimeBetweenOrderBySlot_StartTimeAsc(LocalDateTime from, LocalDateTime to);
+
+    // Reception's "needs my attention" list: every appointment in one status (REQUESTED for the
+    // confirm queue), across all dates, soonest slot first.
+    List<Appointment> findByStatusOrderBySlot_StartTimeAsc(AppointmentStatus status);
 }

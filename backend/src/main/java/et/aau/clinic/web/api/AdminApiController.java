@@ -1,5 +1,6 @@
 package et.aau.clinic.web.api;
 
+import et.aau.clinic.domain.AppointmentStatus;
 import et.aau.clinic.repository.AppointmentRepository;
 import et.aau.clinic.web.api.dto.AdminAppointmentResponse;
 import et.aau.clinic.web.api.dto.ErrorResponse;
@@ -14,11 +15,18 @@ import java.time.Clock;
 import java.time.LocalDate;
 
 /**
- * Reception's day roster (hospital-expansion): every appointment for a
- * given date, earliest slot first, regardless of whether the patient
- * has checked in yet. Separate from QueueApiController's live queue,
- * which only covers patients who have physically checked in - this
- * shows who is expected today at all, checked in or not.
+ * Reception's views onto everyone's appointments (hospital-expansion),
+ * both reception-only:
+ *
+ *   /api/admin/appointments/pending - every REQUESTED appointment, any
+ *   date, soonest slot first. This is the "confirm queue": a patient
+ *   requests a booking and it sits here until reception confirms it.
+ *
+ *   /api/admin/appointments?date=... - the day roster: every appointment
+ *   whose slot falls on one date, checked in or not. Defaults to today.
+ *
+ * Both are separate from QueueApiController's live queue, which only
+ * covers patients who have physically checked in.
  */
 @RestController
 public class AdminApiController {
@@ -31,15 +39,26 @@ public class AdminApiController {
         this.clock = clock;
     }
 
+    @GetMapping("/api/admin/appointments/pending")
+    public ResponseEntity<?> pendingConfirmation(HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        return ResponseEntity.ok(appointmentRepository
+                .findByStatusOrderBySlot_StartTimeAsc(AppointmentStatus.REQUESTED)
+                .stream()
+                .map(AdminAppointmentResponse::from)
+                .toList());
+    }
+
     @GetMapping("/api/admin/appointments")
     public ResponseEntity<?> appointmentsForDate(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             HttpSession session) {
-        if (session.getAttribute("patientId") == null) {
-            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
-        }
-        if (!"ADMIN".equals(session.getAttribute("role"))) {
-            return ResponseEntity.status(403).body(new ErrorResponse("Reception only."));
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
         }
 
         LocalDate day = date != null ? date : LocalDate.now(clock);
@@ -48,5 +67,15 @@ public class AdminApiController {
                 .stream()
                 .map(AdminAppointmentResponse::from)
                 .toList());
+    }
+
+    private ResponseEntity<ErrorResponse> requireAdmin(HttpSession session) {
+        if (session.getAttribute("patientId") == null) {
+            return ResponseEntity.status(401).body(new ErrorResponse("Not logged in."));
+        }
+        if (!"ADMIN".equals(session.getAttribute("role"))) {
+            return ResponseEntity.status(403).body(new ErrorResponse("Reception only."));
+        }
+        return null;
     }
 }

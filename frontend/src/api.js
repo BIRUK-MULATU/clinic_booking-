@@ -51,6 +51,8 @@ export const api = {
 
   // Reception's day roster: everyone expected on a given date, checked in or not.
   adminAppointments: (date) => request(`/admin/appointments${date ? `?date=${date}` : ""}`),
+  // Reception's confirm queue: every REQUESTED appointment, any date.
+  pendingAppointments: () => request("/admin/appointments/pending"),
 
   // Hospital-expansion Phase E: the visit record for one appointment. The GET 404s
   // when nothing has been recorded yet, which is a normal state, not an error - so

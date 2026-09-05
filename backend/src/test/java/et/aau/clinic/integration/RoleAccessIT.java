@@ -74,6 +74,7 @@ class RoleAccessIT {
         mockMvc.perform(get("/api/queue")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/doctors")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/admin/appointments")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/admin/appointments/pending")).andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -84,6 +85,7 @@ class RoleAccessIT {
         mockMvc.perform(get("/api/doctors").session(patient)).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/departments").session(patient)).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/admin/appointments").session(patient)).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/appointments/pending").session(patient)).andExpect(status().isForbidden());
     }
 
     @Test
@@ -93,6 +95,28 @@ class RoleAccessIT {
         mockMvc.perform(get("/api/queue").session(admin)).andExpect(status().isOk());
         mockMvc.perform(get("/api/doctors").session(admin)).andExpect(status().isOk());
         mockMvc.perform(get("/api/admin/appointments").session(admin)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/admin/appointments/pending").session(admin)).andExpect(status().isOk());
+    }
+
+    @Test
+    void pendingAppointments_listsEveryRequestedAppointment_regardlessOfDate() throws Exception {
+        // A REQUESTED appointment for a future date is invisible on the date roster (which
+        // defaults to today) but must always show on the confirm queue - the bug this endpoint fixes.
+        Patient patient = patientRepository.save(
+                new Patient("Tigist Alemu", LocalDate.of(1990, 1, 1), "role-pending", "secret", "0911111111"));
+        Slot nextWeek = slotRepository.save(new Slot(FIXED_NOW.plusDays(7)));
+        appointmentService.requestBooking(patient.getId(), nextWeek.getId());
+
+        MockHttpSession admin = login("role-admin-pending", Role.ADMIN);
+
+        mockMvc.perform(get("/api/admin/appointments").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+        mockMvc.perform(get("/api/admin/appointments/pending").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].patientName").value("Tigist Alemu"))
+                .andExpect(jsonPath("$[0].status").value("REQUESTED"));
     }
 
     @Test

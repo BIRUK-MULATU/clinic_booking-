@@ -27,7 +27,7 @@ export default function TopBar() {
                 Doctors
               </NavLink>
               <NavLink to="/queue" className={({ isActive }) => (isActive ? "active" : "")}>
-                Queue
+                Reception
               </NavLink>
             </>
           ) : (
