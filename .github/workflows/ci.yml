@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: [main, feature/hospital-expansion]
   pull_request:
+    branches: [main, feature/hospital-expansion]
 
 jobs:
   build:
