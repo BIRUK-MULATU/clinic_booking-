@@ -52,38 +52,40 @@ export default function SlotsPage() {
       )}
 
       {slots?.length > 0 && (
-        <div className="slot-list" id="slots-table">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }} id="slots-table">
           {slots.map((slot) => {
             const { dateLabel, timeLabel } = formatSlot(slot.startTime);
             return (
-              <div className="slot-row" id={`slot-row-${slot.id}`} key={slot.id}>
-                <div className="slot-time" id={`slot-time-${slot.id}`}>
-                  <span className="slot-date">{dateLabel}</span>
-                  <span className="slot-clock">{timeLabel}</span>
-                  {slot.doctor && (
-                    <span
-                      className="slot-clock"
-                      id={`slot-doctor-${slot.id}`}
-                      style={{ display: "flex", alignItems: "center", gap: 8 }}
-                    >
-                      {slot.doctor.photo && (
-                        <img
-                          src={slot.doctor.photo}
-                          alt={slot.doctor.name}
-                          style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }}
-                        />
-                      )}
-                      {slot.doctor.name} · {slot.doctor.specialty}
-                    </span>
+              <div className="card appointment-card" id={`slot-row-${slot.id}`} key={slot.id}>
+                <div className="appointment-info" style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                  {slot.doctor?.photo ? (
+                    <img className="doctor-photo" src={slot.doctor.photo} alt={slot.doctor.name} />
+                  ) : (
+                    <span className="doctor-photo doctor-photo--placeholder">🩺</span>
                   )}
+                  <span style={{ display: "flex", flexDirection: "column", gap: 4 }} id={`slot-time-${slot.id}`}>
+                    <span style={{ fontWeight: 700 }}>
+                      {dateLabel} · {timeLabel}
+                    </span>
+                    <span
+                      style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}
+                      id={`slot-doctor-${slot.id}`}
+                    >
+                      {slot.doctor
+                        ? `${slot.doctor.name} · ${slot.doctor.specialty}`
+                        : "No doctor assigned"}
+                    </span>
+                  </span>
                 </div>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  id={`book-link-${slot.id}`}
-                  onClick={() => navigate(`/book/${slot.id}`)}
-                >
-                  Book
-                </button>
+                <div className="appointment-actions">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    id={`book-link-${slot.id}`}
+                    onClick={() => navigate(`/book/${slot.id}`)}
+                  >
+                    Book
+                  </button>
+                </div>
               </div>
             );
           })}

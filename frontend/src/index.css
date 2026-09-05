@@ -377,38 +377,6 @@ button {
   border: 1px solid rgba(31, 138, 76, 0.2);
 }
 
-.slot-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.slot-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-  box-shadow: var(--shadow);
-}
-
-.slot-row .slot-time {
-  display: flex;
-  flex-direction: column;
-}
-
-.slot-date {
-  font-weight: 700;
-  font-size: 0.98rem;
-}
-
-.slot-clock {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
 .empty-state {
   text-align: center;
   padding: 48px 20px;
