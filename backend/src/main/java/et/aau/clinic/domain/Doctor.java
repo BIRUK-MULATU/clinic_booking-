@@ -43,6 +43,16 @@ public class Doctor {
     @Column
     private String photo;
 
+    /**
+     * The most patients this doctor will see in a single day (hospital-expansion:
+     * doctor capacity). Feeds Rule G / DoctorLoad. Defaults to 8; reception can
+     * change it per doctor.
+     */
+    @Column(nullable = false)
+    private int dailyPatientLimit = DEFAULT_DAILY_PATIENT_LIMIT;
+
+    public static final int DEFAULT_DAILY_PATIENT_LIMIT = 8;
+
     protected Doctor() {
         // required by JPA
     }
@@ -87,5 +97,13 @@ public class Doctor {
 
     public void setPhoto(String photo) {
         this.photo = photo;
+    }
+
+    public int getDailyPatientLimit() {
+        return dailyPatientLimit;
+    }
+
+    public void setDailyPatientLimit(int dailyPatientLimit) {
+        this.dailyPatientLimit = dailyPatientLimit;
     }
 }

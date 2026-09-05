@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api";
+import { api, DOCTOR_LOAD } from "../api";
 import { formatAvailability, readImageAsDataUrl } from "../utils";
 
 export default function DoctorsPage() {
@@ -15,13 +15,23 @@ export default function DoctorsPage() {
   const [specialty, setSpecialty] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [photo, setPhoto] = useState("");
+  const [newLimit, setNewLimit] = useState(8);
+
+  const [limitDrafts, setLimitDrafts] = useState({});
 
   const photoInputs = useRef({});
 
   function load() {
     api
       .doctors()
-      .then(({ ok, data }) => (ok ? setDoctors(data) : setError("Could not load doctors.")))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          setError("Could not load doctors.");
+          return;
+        }
+        setDoctors(data);
+        setLimitDrafts(Object.fromEntries(data.map((d) => [d.id, d.dailyPatientLimit])));
+      })
       .catch(() => setError("Could not reach the server."));
     api
       .departments()
@@ -76,6 +86,7 @@ export default function DoctorsPage() {
         specialty: specialty.trim(),
         departmentId: Number(departmentId),
         photo: photo || null,
+        dailyPatientLimit: Number(newLimit) || null,
       });
       if (!ok) {
         setError(data?.message || "Could not add the doctor.");
@@ -84,6 +95,7 @@ export default function DoctorsPage() {
       setDoctorName("");
       setSpecialty("");
       setPhoto("");
+      setNewLimit(8);
       load();
     } catch (err) {
       setError(err.message || "Could not reach the server.");
@@ -106,11 +118,25 @@ export default function DoctorsPage() {
     }
   }
 
+  async function saveLimit(doctorId) {
+    setError("");
+    try {
+      const { ok, data } = await api.setDoctorLimit(doctorId, Number(limitDrafts[doctorId]));
+      if (!ok) {
+        setError(data?.message || "Could not update the limit.");
+        return;
+      }
+      load();
+    } catch (err) {
+      setError(err.message || "Could not reach the server.");
+    }
+  }
+
   return (
     <div className="page" id="doctors-page">
       <div className="page-header">
         <h1 id="page-title">Doctors</h1>
-        <p>Doctors with their specialty, weekly availability, and photo.</p>
+        <p>Each doctor's specialty, weekly availability, photo, and how full their day is today.</p>
       </div>
 
       {error && <p className="alert alert-error" id="doctors-error">{error}</p>}
@@ -123,57 +149,92 @@ export default function DoctorsPage() {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }} id="doctors-table">
-        {doctors?.map((doctor) => (
-          <div className="card appointment-card" id={`doctor-row-${doctor.id}`} key={doctor.id}>
-            <div className="appointment-info" style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-              {doctor.photo ? (
-                <img className="doctor-photo" id={`doctor-photo-${doctor.id}`} src={doctor.photo} alt={doctor.name} />
-              ) : (
-                <span className="doctor-photo doctor-photo--placeholder" id={`doctor-photo-${doctor.id}`}>
-                  🩺
+        {doctors?.map((doctor) => {
+          const loadInfo = doctor.todayLoad && DOCTOR_LOAD[doctor.todayLoad.status];
+          return (
+            <div className="card appointment-card" id={`doctor-row-${doctor.id}`} key={doctor.id}>
+              <div className="appointment-info" style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                {doctor.photo ? (
+                  <img className="doctor-photo" id={`doctor-photo-${doctor.id}`} src={doctor.photo} alt={doctor.name} />
+                ) : (
+                  <span className="doctor-photo doctor-photo--placeholder" id={`doctor-photo-${doctor.id}`}>
+                    🩺
+                  </span>
+                )}
+                <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontWeight: 700 }}>{doctor.name}</span>
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                    {doctor.specialty} · {doctor.departmentName}
+                  </span>
+                  <span
+                    style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}
+                    id={`doctor-availability-${doctor.id}`}
+                  >
+                    {formatAvailability(doctor.availability)}
+                  </span>
+                  {doctor.todayLoad && (
+                    <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                      <span className={`status-pill status-${loadInfo.pill}`} id={`doctor-load-${doctor.id}`}>
+                        {loadInfo.label}
+                      </span>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                        {doctor.todayLoad.scheduled} of {doctor.todayLoad.dailyLimit} patients today ·{" "}
+                        {doctor.todayLoad.remaining} left
+                      </span>
+                    </span>
+                  )}
                 </span>
-              )}
-              <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontWeight: 700 }}>{doctor.name}</span>
-                <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                  {doctor.specialty} · {doctor.departmentName}
+              </div>
+              <div className="appointment-actions" style={{ flexWrap: "wrap" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <label htmlFor={`doctor-limit-${doctor.id}`} style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                    Daily limit
+                  </label>
+                  <input
+                    id={`doctor-limit-${doctor.id}`}
+                    type="number"
+                    min="1"
+                    value={limitDrafts[doctor.id] ?? ""}
+                    onChange={(e) => setLimitDrafts((d) => ({ ...d, [doctor.id]: e.target.value }))}
+                    style={{ width: 64, padding: "6px 8px", border: "1px solid var(--border)", borderRadius: 8 }}
+                  />
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    id={`save-limit-${doctor.id}`}
+                    disabled={Number(limitDrafts[doctor.id]) === doctor.dailyPatientLimit}
+                    onClick={() => saveLimit(doctor.id)}
+                  >
+                    Save
+                  </button>
                 </span>
-                <span
-                  style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}
-                  id={`doctor-availability-${doctor.id}`}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  ref={(el) => {
+                    photoInputs.current[doctor.id] = el;
+                  }}
+                  id={`doctor-photo-input-${doctor.id}`}
+                  onChange={(e) => pickPhoto(e.target.files[0], (url) => changePhoto(doctor.id, url))}
+                />
+                <button
+                  className="btn btn-secondary btn-sm"
+                  id={`change-photo-${doctor.id}`}
+                  onClick={() => photoInputs.current[doctor.id]?.click()}
                 >
-                  {formatAvailability(doctor.availability)}
-                </span>
-              </span>
+                  {doctor.photo ? "Change photo" : "Add photo"}
+                </button>
+                <Link
+                  className="btn btn-secondary btn-sm"
+                  id={`manage-availability-link-${doctor.id}`}
+                  to={`/doctors/${doctor.id}/availability`}
+                >
+                  Manage Availability
+                </Link>
+              </div>
             </div>
-            <div className="appointment-actions">
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                ref={(el) => {
-                  photoInputs.current[doctor.id] = el;
-                }}
-                id={`doctor-photo-input-${doctor.id}`}
-                onChange={(e) => pickPhoto(e.target.files[0], (url) => changePhoto(doctor.id, url))}
-              />
-              <button
-                className="btn btn-secondary btn-sm"
-                id={`change-photo-${doctor.id}`}
-                onClick={() => photoInputs.current[doctor.id]?.click()}
-              >
-                {doctor.photo ? "Change photo" : "Add photo"}
-              </button>
-              <Link
-                className="btn btn-secondary btn-sm"
-                id={`manage-availability-link-${doctor.id}`}
-                to={`/doctors/${doctor.id}/availability`}
-              >
-                Manage Availability
-              </Link>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="card">
@@ -209,6 +270,16 @@ export default function DoctorsPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="field" style={{ marginBottom: 0, width: 130 }}>
+              <label htmlFor="doctor-limit">Daily limit</label>
+              <input
+                id="doctor-limit"
+                type="number"
+                min="1"
+                value={newLimit}
+                onChange={(e) => setNewLimit(e.target.value)}
+              />
             </div>
             <div className="field" style={{ marginBottom: 0 }}>
               <label htmlFor="doctor-photo-input">Photo</label>

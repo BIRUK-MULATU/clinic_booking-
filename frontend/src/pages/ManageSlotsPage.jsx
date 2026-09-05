@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, REJECTION_MESSAGES } from "../api";
+import { api, DOCTOR_LOAD, REJECTION_MESSAGES } from "../api";
 import { formatSlot } from "../utils";
 
 /**
@@ -46,7 +46,11 @@ export default function ManageSlotsPage() {
         setError(data?.message || "The slot could not be added.");
         return;
       }
-      setNotice("Slot added.");
+      if (data?.warning) {
+        setError(`Slot added — but ${data.warning}`);
+      } else {
+        setNotice("Slot added.");
+      }
       setSlotStart("");
       load();
     } catch (err) {
@@ -182,22 +186,32 @@ export default function ManageSlotsPage() {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }} id="slots-table">
-        {slots?.map((slot) => (
-          <div className="card appointment-card" id={`slot-row-${slot.id}`} key={slot.id}>
-            <div className="appointment-info">
-              <span style={{ fontWeight: 700 }}>{formatSlot(slot.startTime).raw}</span>
-              <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                {slot.doctor ? `${slot.doctor.name} · ${slot.doctor.specialty}` : "No doctor assigned"}
-              </span>
-              <span
-                className={`status-pill status-${slot.booked ? "CONFIRMED" : "REQUESTED"}`}
-                id={`slot-state-${slot.id}`}
-              >
-                {slot.booked ? "Booked" : "Free"}
-              </span>
+        {slots?.map((slot) => {
+          const dayLoad = slot.doctorDayStatus && DOCTOR_LOAD[slot.doctorDayStatus];
+          return (
+            <div className="card appointment-card" id={`slot-row-${slot.id}`} key={slot.id}>
+              <div className="appointment-info">
+                <span style={{ fontWeight: 700 }}>{formatSlot(slot.startTime).raw}</span>
+                <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                  {slot.doctor ? `${slot.doctor.name} · ${slot.doctor.specialty}` : "No doctor assigned"}
+                </span>
+                <span style={{ display: "flex", gap: 6 }}>
+                  <span
+                    className={`status-pill status-${slot.booked ? "CONFIRMED" : "REQUESTED"}`}
+                    id={`slot-state-${slot.id}`}
+                  >
+                    {slot.booked ? "Booked" : "Free"}
+                  </span>
+                  {dayLoad && (
+                    <span className={`status-pill status-${dayLoad.pill}`} id={`slot-doctor-load-${slot.id}`}>
+                      Doctor {dayLoad.label.toLowerCase()} this day
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

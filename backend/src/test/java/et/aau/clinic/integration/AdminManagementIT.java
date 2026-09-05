@@ -131,11 +131,48 @@ class AdminManagementIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"doctorId\":" + doctor.getId() + ",\"startTime\":\"" + FIXED_NOW.plusDays(2) + "\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.doctor.name").value("Dr. Test"));
+                .andExpect(jsonPath("$.slot.doctor.name").value("Dr. Test"))
+                .andExpect(jsonPath("$.warning").doesNotExist());
 
         mockMvc.perform(get("/api/admin/slots").session(admin))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void addSlot_beyondTheDoctorsDailyLimit_stillCreatesButWarns() throws Exception {
+        Department department = departmentRepository.save(new Department("Cap Dept"));
+        Doctor doctor = doctorRepository.save(new Doctor("Dr. Busy", "GP", department));
+        doctor.setDailyPatientLimit(2);
+        doctorRepository.save(doctor);
+        MockHttpSession admin = login("mgmt-cap1", Role.ADMIN);
+
+        LocalDate day = FIXED_NOW.toLocalDate().plusDays(3);
+        for (int hour = 9; hour <= 10; hour++) {
+            mockMvc.perform(post("/api/slots").session(admin)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"doctorId\":" + doctor.getId() + ",\"startTime\":\""
+                                    + day.atTime(hour, 0) + "\"}"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.warning").doesNotExist());
+        }
+        // The third slot on the same day is one past the limit of 2 - created, with a warning.
+        mockMvc.perform(post("/api/slots").session(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"doctorId\":" + doctor.getId() + ",\"startTime\":\"" + day.atTime(11, 0) + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.slot.id").exists())
+                .andExpect(jsonPath("$.warning").value(org.hamcrest.Matchers.containsString("daily patient limit of 2")));
+    }
+
+    @Test
+    void setDoctorLimit_belowOne_isRejected() throws Exception {
+        Doctor doctor = seedDoctor();
+        MockHttpSession admin = login("mgmt-cap2", Role.ADMIN);
+        mockMvc.perform(put("/api/doctors/" + doctor.getId() + "/limit").session(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dailyPatientLimit\":0}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -169,7 +206,7 @@ class AdminManagementIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"doctorId\":" + doctor.getId() + ",\"startTime\":\"" + FIXED_NOW.plusDays(1) + "\"}"))
                 .andReturn().getResponse().getContentAsString();
-        long slotId = com.jayway.jsonpath.JsonPath.parse(slotResponse).read("$.id", Integer.class);
+        long slotId = com.jayway.jsonpath.JsonPath.parse(slotResponse).read("$.slot.id", Integer.class);
 
         mockMvc.perform(post("/api/admin/appointments").session(admin)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -211,6 +248,36 @@ class AdminManagementIT {
                 .andExpect(jsonPath("$[0].photo").value(TINY_IMAGE))
                 .andExpect(jsonPath("$[0].availability", hasSize(1)))
                 .andExpect(jsonPath("$[0].availability[0].dayOfWeek").value("MONDAY"));
+    }
+
+    @Test
+    void doctorsList_carriesTheDailyLimitAndTodaysLoad() throws Exception {
+        Department department = departmentRepository.save(new Department("Load Dept"));
+        Doctor doctor = doctorRepository.save(new Doctor("Dr. Load", "GP", department));
+        doctor.setDailyPatientLimit(3);
+        doctorRepository.save(doctor);
+        Patient patient = patientRepository.save(
+                new Patient("Load Patient", LocalDate.of(1990, 1, 1), "loadp", "secret", "0911000000"));
+        MockHttpSession admin = login("mgmt-load1", Role.ADMIN);
+
+        // Book one patient with this doctor today, so today's load is 1 of 3 (AVAILABLE).
+        String slotResponse = mockMvc.perform(post("/api/slots").session(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"doctorId\":" + doctor.getId() + ",\"startTime\":\""
+                                + FIXED_NOW.toLocalDate().atTime(15, 0) + "\"}"))
+                .andReturn().getResponse().getContentAsString();
+        long slotId = com.jayway.jsonpath.JsonPath.parse(slotResponse).read("$.slot.id", Integer.class);
+        mockMvc.perform(post("/api/admin/appointments").session(admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"patientId\":" + patient.getId() + ",\"slotId\":" + slotId + "}"));
+
+        mockMvc.perform(get("/api/doctors").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Dr. Load')].dailyPatientLimit").value(org.hamcrest.Matchers.contains(3)))
+                .andExpect(jsonPath("$[?(@.name=='Dr. Load')].todayLoad.scheduled")
+                        .value(org.hamcrest.Matchers.contains(1)))
+                .andExpect(jsonPath("$[?(@.name=='Dr. Load')].todayLoad.status")
+                        .value(org.hamcrest.Matchers.contains("AVAILABLE")));
     }
 
     @Test

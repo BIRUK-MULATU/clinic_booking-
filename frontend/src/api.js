@@ -44,6 +44,8 @@ export const api = {
     request(`/doctors/${doctorId}/exceptions`, { method: "POST", body: JSON.stringify({ date }) }),
   setDoctorPhoto: (doctorId, photo) =>
     request(`/doctors/${doctorId}/photo`, { method: "PUT", body: JSON.stringify({ photo }) }),
+  setDoctorLimit: (doctorId, dailyPatientLimit) =>
+    request(`/doctors/${doctorId}/limit`, { method: "PUT", body: JSON.stringify({ dailyPatientLimit }) }),
 
   // Hospital-expansion: reception creates patient accounts, adds slots, and books for patients.
   patients: () => request("/admin/patients"),
@@ -90,6 +92,13 @@ export const VISIT_REJECTION_MESSAGES = {
   VISIT_ALREADY_RECORDED: "This visit has already been recorded.",
   DIAGNOSIS_REQUIRED: "A diagnosis is required.",
   DIAGNOSIS_TOO_LONG: "The diagnosis is too long (500 characters maximum).",
+};
+
+// Hospital-expansion: doctor daily-capacity status → label + status-pill class suffix.
+export const DOCTOR_LOAD = {
+  AVAILABLE: { label: "Has room", pill: "CONFIRMED" },
+  NEARLY_FULL: { label: "Nearly full", pill: "REQUESTED" },
+  FULL: { label: "Full", pill: "NO_SHOW" },
 };
 
 // Hospital-expansion: why PatientRegistrationPolicy refused to create an account.

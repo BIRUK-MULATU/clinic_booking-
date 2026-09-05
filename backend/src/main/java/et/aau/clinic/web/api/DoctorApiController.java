@@ -7,10 +7,12 @@ import et.aau.clinic.repository.DepartmentRepository;
 import et.aau.clinic.repository.DoctorAvailabilityRepository;
 import et.aau.clinic.repository.DoctorRepository;
 import et.aau.clinic.service.AvailabilityService;
+import et.aau.clinic.service.DoctorLoadService;
 import et.aau.clinic.web.api.dto.AvailabilityRuleRequest;
 import et.aau.clinic.web.api.dto.AvailabilityRuleResponse;
 import et.aau.clinic.web.api.dto.DepartmentRequest;
 import et.aau.clinic.web.api.dto.DepartmentResponse;
+import et.aau.clinic.web.api.dto.DoctorLimitRequest;
 import et.aau.clinic.web.api.dto.DoctorPhotoRequest;
 import et.aau.clinic.web.api.dto.DoctorRequest;
 import et.aau.clinic.web.api.dto.DoctorResponse;
@@ -19,6 +21,9 @@ import et.aau.clinic.web.api.dto.ExceptionDateRequest;
 import et.aau.clinic.web.api.dto.ExceptionDateResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
+
+import java.time.Clock;
+import java.time.LocalDate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,17 +49,23 @@ public class DoctorApiController {
     private final DoctorAvailabilityRepository availabilityRepository;
     private final AvailabilityExceptionRepository exceptionRepository;
     private final AvailabilityService availabilityService;
+    private final DoctorLoadService doctorLoadService;
+    private final Clock clock;
 
     public DoctorApiController(DoctorRepository doctorRepository,
                                 DepartmentRepository departmentRepository,
                                 DoctorAvailabilityRepository availabilityRepository,
                                 AvailabilityExceptionRepository exceptionRepository,
-                                AvailabilityService availabilityService) {
+                                AvailabilityService availabilityService,
+                                DoctorLoadService doctorLoadService,
+                                Clock clock) {
         this.doctorRepository = doctorRepository;
         this.departmentRepository = departmentRepository;
         this.availabilityRepository = availabilityRepository;
         this.exceptionRepository = exceptionRepository;
         this.availabilityService = availabilityService;
+        this.doctorLoadService = doctorLoadService;
+        this.clock = clock;
     }
 
     @GetMapping("/api/doctors")
@@ -63,8 +74,10 @@ public class DoctorApiController {
         if (denied != null) {
             return denied;
         }
+        LocalDate today = LocalDate.now(clock);
         return ResponseEntity.ok(doctorRepository.findAll().stream()
-                .map(doctor -> DoctorResponse.from(doctor, availabilityRepository.findByDoctor(doctor)))
+                .map(doctor -> DoctorResponse.from(
+                        doctor, availabilityRepository.findByDoctor(doctor), doctorLoadService.loadOn(doctor, today)))
                 .toList());
     }
 
@@ -78,11 +91,17 @@ public class DoctorApiController {
         if (photoError != null) {
             return ResponseEntity.badRequest().body(new ErrorResponse(photoError));
         }
+        if (request.dailyPatientLimit() != null && request.dailyPatientLimit() < 1) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("The daily patient limit must be at least 1."));
+        }
         Department department = departmentRepository.findById(request.departmentId()).orElseThrow();
         Doctor doctor = new Doctor(request.name(), request.specialty(), department);
         doctor.setPhoto(emptyToNull(request.photo()));
+        if (request.dailyPatientLimit() != null) {
+            doctor.setDailyPatientLimit(request.dailyPatientLimit());
+        }
         Doctor saved = doctorRepository.save(doctor);
-        return ResponseEntity.status(201).body(DoctorResponse.from(saved, availabilityRepository.findByDoctor(saved)));
+        return ResponseEntity.status(201).body(describe(saved));
     }
 
     @PutMapping("/api/doctors/{id}/photo")
@@ -98,8 +117,27 @@ public class DoctorApiController {
         }
         Doctor doctor = doctorRepository.findById(id).orElseThrow();
         doctor.setPhoto(emptyToNull(request.photo()));
-        Doctor saved = doctorRepository.save(doctor);
-        return ResponseEntity.ok(DoctorResponse.from(saved, availabilityRepository.findByDoctor(saved)));
+        return ResponseEntity.ok(describe(doctorRepository.save(doctor)));
+    }
+
+    @PutMapping("/api/doctors/{id}/limit")
+    public ResponseEntity<?> setLimit(@PathVariable Long id, @RequestBody DoctorLimitRequest request,
+                                      HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        if (request.dailyPatientLimit() == null || request.dailyPatientLimit() < 1) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("The daily patient limit must be at least 1."));
+        }
+        Doctor doctor = doctorRepository.findById(id).orElseThrow();
+        doctor.setDailyPatientLimit(request.dailyPatientLimit());
+        return ResponseEntity.ok(describe(doctorRepository.save(doctor)));
+    }
+
+    private DoctorResponse describe(Doctor doctor) {
+        return DoctorResponse.from(doctor, availabilityRepository.findByDoctor(doctor),
+                doctorLoadService.loadOn(doctor, LocalDate.now(clock)));
     }
 
     @GetMapping("/api/departments")

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api";
+import { api, DOCTOR_LOAD } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { formatSlot } from "../utils";
 
@@ -75,6 +75,17 @@ export default function SlotsPage() {
                         ? `${slot.doctor.name} · ${slot.doctor.specialty}`
                         : "No doctor assigned"}
                     </span>
+                    {slot.doctorDayStatus && slot.doctorDayStatus !== "AVAILABLE" && (
+                      <span
+                        className={`status-pill status-${DOCTOR_LOAD[slot.doctorDayStatus].pill}`}
+                        id={`slot-doctor-load-${slot.id}`}
+                        style={{ alignSelf: "flex-start" }}
+                      >
+                        {slot.doctorDayStatus === "FULL"
+                          ? "Doctor fully booked this day"
+                          : "Doctor nearly full this day"}
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div className="appointment-actions">
