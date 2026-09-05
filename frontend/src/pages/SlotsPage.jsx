@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api, DOCTOR_LOAD } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { formatSlot } from "../utils";
+import { defaultDoctorAvatar } from "../doctorAvatars";
 
 export default function SlotsPage() {
   const { patient } = useAuth();
@@ -58,10 +59,14 @@ export default function SlotsPage() {
             return (
               <div className="card appointment-card" id={`slot-row-${slot.id}`} key={slot.id}>
                 <div className="appointment-info" style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                  {slot.doctor?.photo ? (
-                    <img className="doctor-photo" src={slot.doctor.photo} alt={slot.doctor.name} />
+                  {slot.doctor ? (
+                    <img
+                      className="doctor-photo"
+                      src={slot.doctor.photo || defaultDoctorAvatar(slot.doctor.id)}
+                      alt={slot.doctor.name}
+                    />
                   ) : (
-                    <span className="doctor-photo doctor-photo--placeholder">🩺</span>
+                    <span className="doctor-photo doctor-photo--placeholder">🗓️</span>
                   )}
                   <span style={{ display: "flex", flexDirection: "column", gap: 4 }} id={`slot-time-${slot.id}`}>
                     <span style={{ fontWeight: 700 }}>

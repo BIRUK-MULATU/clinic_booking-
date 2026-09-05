@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, DOCTOR_LOAD } from "../api";
 import { formatAvailability, readImageAsDataUrl } from "../utils";
+import { DOCTOR_AVATAR_FEMALE, DOCTOR_AVATAR_MALE, defaultDoctorAvatar } from "../doctorAvatars";
 import ConfirmButton from "../components/ConfirmButton";
 
 export default function DoctorsPage() {
@@ -262,13 +263,12 @@ export default function DoctorsPage() {
           return (
             <div className="card appointment-card" id={`doctor-row-${doctor.id}`} key={doctor.id}>
               <div className="appointment-info" style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                {doctor.photo ? (
-                  <img className="doctor-photo" id={`doctor-photo-${doctor.id}`} src={doctor.photo} alt={doctor.name} />
-                ) : (
-                  <span className="doctor-photo doctor-photo--placeholder" id={`doctor-photo-${doctor.id}`}>
-                    🩺
-                  </span>
-                )}
+                <img
+                  className="doctor-photo"
+                  id={`doctor-photo-${doctor.id}`}
+                  src={doctor.photo || defaultDoctorAvatar(doctor.id)}
+                  alt={doctor.name}
+                />
                 <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <span style={{ fontWeight: 700 }}>{doctor.name}</span>
                   <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
@@ -330,7 +330,23 @@ export default function DoctorsPage() {
                   id={`change-photo-${doctor.id}`}
                   onClick={() => photoInputs.current[doctor.id]?.click()}
                 >
-                  {doctor.photo ? "Change photo" : "Add photo"}
+                  {doctor.photo ? "Change photo" : "Upload photo"}
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  id={`portrait-male-${doctor.id}`}
+                  title="Use the male doctor portrait"
+                  onClick={() => changePhoto(doctor.id, DOCTOR_AVATAR_MALE)}
+                >
+                  ♂ Portrait
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  id={`portrait-female-${doctor.id}`}
+                  title="Use the female doctor portrait"
+                  onClick={() => changePhoto(doctor.id, DOCTOR_AVATAR_FEMALE)}
+                >
+                  ♀ Portrait
                 </button>
                 <Link
                   className="btn btn-secondary btn-sm"

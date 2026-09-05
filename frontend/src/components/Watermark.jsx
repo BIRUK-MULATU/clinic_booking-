@@ -1,8 +1,9 @@
 /**
- * A faint decorative watermark - two doctors in conversation - sitting
- * behind the page content. Rendered only for patients (see App.jsx), not
- * for the reception/admin side, which stays plain for quick scanning.
- * Purely decorative: aria-hidden and pointer-events:none.
+ * A faint decorative watermark - a male and a female doctor in
+ * conversation - sitting behind the page content. Rendered only for
+ * patients (see App.jsx), not the reception/admin side, which stays
+ * plain for quick scanning. Purely decorative: aria-hidden,
+ * pointer-events:none.
  */
 export default function Watermark() {
   return (
@@ -27,59 +28,48 @@ export default function Watermark() {
       >
         {/* speech bubbles */}
         <g fill="currentColor">
-          <rect x="150" y="26" width="120" height="60" rx="18" />
-          <path d="M176 84 L176 112 L204 84 Z" />
-          <rect x="266" y="8" width="120" height="60" rx="18" />
-          <path d="M356 66 L356 94 L328 66 Z" />
+          <rect x="150" y="24" width="118" height="58" rx="18" />
+          <path d="M176 80 L176 106 L202 80 Z" />
+          <rect x="264" y="8" width="118" height="58" rx="18" />
+          <path d="M354 64 L354 90 L328 64 Z" />
         </g>
         <g fill="var(--bg)">
-          <circle cx="182" cy="56" r="7" />
-          <circle cx="210" cy="56" r="7" />
-          <circle cx="238" cy="56" r="7" />
-          <circle cx="298" cy="38" r="7" />
-          <circle cx="326" cy="38" r="7" />
-          <circle cx="354" cy="38" r="7" />
+          <circle cx="182" cy="53" r="7" />
+          <circle cx="209" cy="53" r="7" />
+          <circle cx="236" cy="53" r="7" />
+          <circle cx="296" cy="37" r="7" />
+          <circle cx="323" cy="37" r="7" />
+          <circle cx="350" cy="37" r="7" />
         </g>
 
-        {/* left doctor, facing right */}
-        <g fill="currentColor">
-          <circle cx="150" cy="150" r="34" />
-          <path d="M92 340 L104 214 Q104 176 150 176 Q196 176 196 214 L208 340 Z" />
+        {/* left - male doctor bust, facing right */}
+        <g>
+          <path d="M78 340 C78 250 108 224 150 224 C192 224 222 250 222 340 Z" fill="currentColor" />
+          <circle cx="150" cy="160" r="42" fill="currentColor" />
+          {/* short hair cap */}
+          <path d="M108 158 C108 108 192 108 192 158 C192 132 174 116 150 116 C126 116 108 132 108 158 Z" fill="currentColor" />
+          {/* coat opening + collar */}
+          <path d="M150 224 L134 268 L150 306 L166 268 Z" fill="var(--bg)" />
+          <path d="M150 224 L120 244 L132 262 L150 236 Z" fill="var(--bg)" />
+          <path d="M150 224 L180 244 L168 262 L150 236 Z" fill="var(--bg)" />
+          {/* stethoscope */}
+          <path d="M132 230 C104 262 110 312 150 322" fill="none" stroke="var(--bg)" strokeWidth="8" strokeLinecap="round" />
+          <circle cx="168" cy="300" r="11" fill="var(--bg)" />
         </g>
-        <g fill="var(--bg)">
-          {/* coat opening */}
-          <path d="M150 176 L138 214 L150 250 L162 214 Z" />
-          {/* medical cross */}
-          <path d="M170 232 h14 v10 h-14 v14 h-10 v-14 h-14 v-10 h14 v-14 h10 Z" />
-        </g>
-        {/* stethoscope */}
-        <path
-          d="M136 182 C112 210 116 252 150 262"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
-        <circle cx="150" cy="266" r="9" fill="currentColor" />
 
-        {/* right doctor, mirrored */}
+        {/* right - female doctor bust, facing left */}
         <g transform="translate(520 0) scale(-1 1)">
-          <g fill="currentColor">
-            <circle cx="150" cy="150" r="34" />
-            <path d="M92 340 L104 214 Q104 176 150 176 Q196 176 196 214 L208 340 Z" />
-          </g>
-          <g fill="var(--bg)">
-            <path d="M150 176 L138 214 L150 250 L162 214 Z" />
-            <path d="M170 232 h14 v10 h-14 v14 h-10 v-14 h-14 v-10 h14 v-14 h10 Z" />
-          </g>
-          <path
-            d="M136 182 C112 210 116 252 150 262"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="6"
-            strokeLinecap="round"
-          />
-          <circle cx="150" cy="266" r="9" fill="currentColor" />
+          {/* long hair behind */}
+          <path d="M96 300 C88 190 212 190 204 300 L184 300 C190 220 110 220 116 300 Z" fill="currentColor" />
+          <path d="M78 340 C78 250 108 224 150 224 C192 224 222 250 222 340 Z" fill="currentColor" />
+          <circle cx="150" cy="160" r="42" fill="currentColor" />
+          {/* hair framing the face */}
+          <path d="M104 168 C100 118 200 118 196 168 C196 130 176 112 150 112 C124 112 104 130 104 168 Z" fill="currentColor" />
+          <path d="M150 224 L134 268 L150 306 L166 268 Z" fill="var(--bg)" />
+          <path d="M150 224 L120 244 L132 262 L150 236 Z" fill="var(--bg)" />
+          <path d="M150 224 L180 244 L168 262 L150 236 Z" fill="var(--bg)" />
+          <path d="M132 230 C104 262 110 312 150 322" fill="none" stroke="var(--bg)" strokeWidth="8" strokeLinecap="round" />
+          <circle cx="168" cy="300" r="11" fill="var(--bg)" />
         </g>
       </svg>
     </div>
