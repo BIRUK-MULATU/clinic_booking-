@@ -100,7 +100,7 @@ class AppointmentServiceTest {
         Patient patient = adultPatient();
         Slot slot = new Slot(FIXED_NOW.plusHours(3));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -117,7 +117,7 @@ class AppointmentServiceTest {
         Patient patient = adultPatient();
         Slot slot = new Slot(FIXED_NOW.plusHours(3));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(true);
 
         BookingOutcome outcome = service.requestBooking(1L, 2L);
@@ -134,7 +134,7 @@ class AppointmentServiceTest {
         patient.setOutstandingBalance(new BigDecimal("50"));
         Slot slot = new Slot(FIXED_NOW.plusHours(3));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
 
         BookingOutcome outcome = service.requestBooking(1L, 2L);
@@ -147,7 +147,7 @@ class AppointmentServiceTest {
         Patient patient = adultPatient();
         Slot slot = new Slot(FIXED_NOW.plusMinutes(30));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
 
         BookingOutcome outcome = service.requestBooking(1L, 2L);
@@ -219,7 +219,7 @@ class AppointmentServiceTest {
         Patient patient = adultPatient();
         Slot slot = new Slot(FIXED_NOW.plusMinutes(30)); // inside the 2h window: reception may override C3
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -237,7 +237,7 @@ class AppointmentServiceTest {
         patient.setOutstandingBalance(new BigDecimal("500"));
         Slot slot = new Slot(FIXED_NOW.plusMinutes(15));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -252,7 +252,7 @@ class AppointmentServiceTest {
         Patient patient = adultPatient();
         Slot slot = new Slot(FIXED_NOW.plusHours(3));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(true);
 
         BookingOutcome outcome = service.bookForPatient(1L, 2L);
@@ -355,7 +355,7 @@ class AppointmentServiceTest {
         Patient patient = adultPatient();
         Slot slot = new Slot(FIXED_NOW.plusHours(3));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.findByPatientAndStatus(patient, AppointmentStatus.NO_SHOW))
                 .thenReturn(List.of(
                         noShow(patient, FIXED_NOW.minusDays(5)),
@@ -375,7 +375,7 @@ class AppointmentServiceTest {
         Patient patient = adultPatient();
         Slot slot = new Slot(FIXED_NOW.plusHours(3));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.findByPatientAndStatus(patient, AppointmentStatus.NO_SHOW))
                 .thenReturn(List.of(
                         noShow(patient, FIXED_NOW.minusDays(5)),
@@ -393,7 +393,7 @@ class AppointmentServiceTest {
         Patient patient = adultPatient();
         Slot slot = new Slot(FIXED_NOW.plusHours(3));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -412,7 +412,7 @@ class AppointmentServiceTest {
         Appointment appointment = new Appointment(
                 patient, oldSlot, AppointmentStatus.REQUESTED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
         when(appointmentRepository.findById(5L)).thenReturn(Optional.of(appointment));
-        when(slotRepository.findById(9L)).thenReturn(Optional.of(newSlot));
+        when(slotRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(newSlot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(newSlot), any())).thenReturn(false);
         when(appointmentRepository.findFirstBySlotAndStatusOrderByRequestedAtAsc(oldSlot, AppointmentStatus.WAITLISTED))
                 .thenReturn(Optional.empty());
@@ -434,7 +434,7 @@ class AppointmentServiceTest {
         Appointment appointment = new Appointment(patient, new Slot(FIXED_NOW.plusHours(5)),
                 AppointmentStatus.CONFIRMED, FeeCategory.CHILD, new BigDecimal("100"), FIXED_NOW.minusDays(400));
         when(appointmentRepository.findById(5L)).thenReturn(Optional.of(appointment));
-        when(slotRepository.findById(9L)).thenReturn(Optional.of(newSlot));
+        when(slotRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(newSlot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(newSlot), any())).thenReturn(false);
         when(appointmentRepository.findFirstBySlotAndStatusOrderByRequestedAtAsc(any(), eq(AppointmentStatus.WAITLISTED)))
                 .thenReturn(Optional.empty());
@@ -454,7 +454,7 @@ class AppointmentServiceTest {
         Appointment appointment = new Appointment(
                 patient, oldSlot, AppointmentStatus.REQUESTED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
         when(appointmentRepository.findById(5L)).thenReturn(Optional.of(appointment));
-        when(slotRepository.findById(9L)).thenReturn(Optional.of(newSlot));
+        when(slotRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(newSlot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(newSlot), any())).thenReturn(true);
 
         var outcome = service.reschedule(5L, 9L);
@@ -519,7 +519,7 @@ class AppointmentServiceTest {
         patient.setCoveragePercent(40);
         Slot slot = new Slot(FIXED_NOW.plusHours(3));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -534,7 +534,7 @@ class AppointmentServiceTest {
         Patient patient = adultPatient();
         Slot slot = new Slot(FIXED_NOW.plusHours(3));
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(slotRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(slot));
         when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 

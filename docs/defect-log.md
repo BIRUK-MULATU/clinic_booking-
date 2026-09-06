@@ -252,3 +252,64 @@ cannot affect the Thymeleaf controllers.
 
 `AdminCrudIT` (11 tests) - the guarded deletes now return `400` with a JSON
 message; `mvn clean verify` green.
+
+---
+
+## DEF-005: Concurrent bookings of the same slot both succeed (slot double-booked)
+
+**Found:** hospital-expansion, deliberately, while adding a concurrency
+test for Rule 2's C1 guard. Previously disclosed in
+`04-test-summary-and-reflection.pdf` as a known, un-fixed gap ("concurrent
+double-booking"); this closes it.
+**Component:** `backend/.../service/AppointmentService.requestBooking` (and
+`bookForPatient`, `reschedule`), `backend/.../repository/SlotRepository`.
+**Severity:** High - two patients can hold the same appointment slot; the
+clinic's core invariant (one active appointment per slot) is violable.
+**Priority:** Medium - only manifests under genuinely simultaneous
+requests, which a small clinic rarely sees, but the data corruption is
+permanent when it does.
+**Status:** Closed
+
+### Steps to reproduce
+
+1. `BookingConcurrencyIT`: 8 patients call `requestBooking` for one slot
+   from 8 threads released together by a `CountDownLatch`.
+2. Without the fix: 2+ threads read `existsBySlotAndStatusIn` as `false`
+   before any has committed its insert, so 2+ appointments are created.
+
+### Expected
+
+Exactly one booking approved; the rest rejected `SLOT_UNAVAILABLE`.
+Exactly one active appointment for the slot afterwards.
+
+### Actual (pre-fix)
+
+`approved` count 2-4 (timing dependent); multiple `REQUESTED` rows for the
+one slot. Confirmed by reverting the fix: the test fails with
+`expected: 1` on the approved count.
+
+### Root cause
+
+Classic check-then-act race. `requestBooking` reads "is the slot free?"
+(`existsBySlotAndStatusIn`) and then inserts the appointment as two
+separate statements with no lock spanning them, and the method was not
+transactional, so concurrent callers interleave between the check and the
+insert.
+
+### Fix
+
+`SlotRepository.findByIdForUpdate` - a `@Lock(PESSIMISTIC_WRITE)` query -
+and `@Transactional` on `requestBooking`, `bookForPatient` and
+`reschedule`. The row-level write lock on the slot serialises the
+check-then-insert section: the second caller blocks until the first
+commits, then sees its appointment and is rejected normally. The lock is
+only taken on the three paths that create/attach an active appointment to
+a slot; `joinWaitlist` is untouched (many WAITLISTED rows per slot is
+legitimate).
+
+### Verification
+
+`BookingConcurrencyIT` (1 test, 8 contending threads) passes with the fix
+and fails without it. Full `mvn clean verify` green; all existing unit and
+integration tests unaffected (the service unit test's slot stub was
+retargeted to `findByIdForUpdate`).

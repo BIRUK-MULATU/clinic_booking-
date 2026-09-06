@@ -23,6 +23,7 @@ import et.aau.clinic.repository.AppointmentRepository;
 import et.aau.clinic.repository.PatientRepository;
 import et.aau.clinic.repository.SlotRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -102,9 +103,10 @@ public class AppointmentService {
         return appointmentRepository.findByPatientOrderByRequestedAtDesc(patient);
     }
 
+    @Transactional
     public BookingOutcome requestBooking(Long patientId, Long slotId) {
         Patient patient = patientRepository.findById(patientId).orElseThrow();
-        Slot slot = slotRepository.findById(slotId).orElseThrow();
+        Slot slot = slotRepository.findByIdForUpdate(slotId).orElseThrow();
         LocalDateTime now = LocalDateTime.now(clock);
 
         // Rule H (highest-priority gate): a patient with 3+ recent no-shows cannot self-book,
@@ -136,9 +138,10 @@ public class AppointmentService {
      * has no reason to confirm its own booking) and the confirmation SMS is sent, exactly
      * as confirm() would.
      */
+    @Transactional
     public BookingOutcome bookForPatient(Long patientId, Long slotId) {
         Patient patient = patientRepository.findById(patientId).orElseThrow();
-        Slot slot = slotRepository.findById(slotId).orElseThrow();
+        Slot slot = slotRepository.findByIdForUpdate(slotId).orElseThrow();
         LocalDateTime now = LocalDateTime.now(clock);
 
         if (slotIsTaken(slot)) {
@@ -297,9 +300,10 @@ public class AppointmentService {
      * is repriced from the patient's age today - so a child who has since turned 18 moves
      * to the adult fee. The old slot it vacated is offered to that slot's waitlist.
      */
+    @Transactional
     public RescheduleOutcome reschedule(Long appointmentId, Long newSlotId) {
         Appointment appointment = appointmentRepository.findById(appointmentId).orElseThrow();
-        Slot newSlot = slotRepository.findById(newSlotId).orElseThrow();
+        Slot newSlot = slotRepository.findByIdForUpdate(newSlotId).orElseThrow();
         LocalDateTime now = LocalDateTime.now(clock);
 
         boolean newSlotFree = !appointmentRepository.existsBySlotAndStatusIn(newSlot, ACTIVE_STATUSES);
