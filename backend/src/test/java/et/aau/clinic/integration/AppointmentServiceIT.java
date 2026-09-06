@@ -137,6 +137,19 @@ class AppointmentServiceIT {
     }
 
     @Test
+    void requestBooking_insuredPatient_persistsNetPayableAlongsideTheFullFee() {
+        patient.setCoveragePercent(60);
+        patientRepository.save(patient);
+        Slot slot = slotRepository.save(new Slot(FIXED_NOW.plusHours(5)));
+
+        BookingOutcome outcome = appointmentService.requestBooking(patient.getId(), slot.getId());
+
+        Appointment persisted = appointmentRepository.findById(outcome.appointment().getId()).orElseThrow();
+        assertThat(persisted.getFeeAmount()).isEqualByComparingTo("250");     // Rule 1, unchanged
+        assertThat(persisted.getNetPayable()).isEqualByComparingTo("100.00"); // Rule G: 250 - 60%
+    }
+
+    @Test
     void sendDueReminders_confirmedAppointmentWithin24h_remindsOnceAndNotAgainOnTheNextSweep() {
         Slot slot = slotRepository.save(new Slot(FIXED_NOW.plusHours(5)));
         BookingOutcome outcome = appointmentService.requestBooking(patient.getId(), slot.getId());

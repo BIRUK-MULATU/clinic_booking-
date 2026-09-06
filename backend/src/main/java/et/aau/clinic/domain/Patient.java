@@ -52,6 +52,15 @@ public class Patient {
     @Column(nullable = false)
     private Role role = Role.PATIENT;
 
+    /**
+     * Insurance coverage as a whole-number percentage of the consultation
+     * fee (hospital-expansion Rule G). Defaults to 0 - a patient with no
+     * insurance pays the full fee. CoverageCalculator rejects anything
+     * outside 0-100.
+     */
+    @Column(nullable = false)
+    private int coveragePercent = 0;
+
     protected Patient() {
         // required by JPA
     }
@@ -127,5 +136,13 @@ public class Patient {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public int getCoveragePercent() {
+        return coveragePercent;
+    }
+
+    public void setCoveragePercent(int coveragePercent) {
+        this.coveragePercent = coveragePercent;
     }
 }

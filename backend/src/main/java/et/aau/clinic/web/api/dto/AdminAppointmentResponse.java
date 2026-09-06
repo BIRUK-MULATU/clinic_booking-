@@ -10,7 +10,7 @@ import java.math.BigDecimal;
  * own appointment but reception needs to see about everyone's.
  */
 public record AdminAppointmentResponse(Long id, String patientName, String slotStartTime, String status,
-                                        String feeCategory, BigDecimal feeAmount) {
+                                        String feeCategory, BigDecimal feeAmount, BigDecimal netPayable) {
 
     public static AdminAppointmentResponse from(Appointment appointment) {
         return new AdminAppointmentResponse(
@@ -19,6 +19,7 @@ public record AdminAppointmentResponse(Long id, String patientName, String slotS
                 appointment.getSlot().getStartTime().toString(),
                 appointment.getStatus().name(),
                 appointment.getFeeCategory().name(),
-                appointment.getFeeAmount());
+                appointment.getFeeAmount(),
+                appointment.getNetPayable());
     }
 }

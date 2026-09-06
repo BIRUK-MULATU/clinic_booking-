@@ -56,6 +56,15 @@ public class Appointment {
      */
     private LocalDateTime reminderSentAt;
 
+    /**
+     * What the patient actually pays after their insurance coverage is
+     * applied to feeAmount (hospital-expansion Rule G). Captured at
+     * booking time like feeAmount, so a later change to the patient's
+     * coverage never rewrites an existing bill. Equals feeAmount when
+     * the patient has no coverage.
+     */
+    private BigDecimal netPayable;
+
     protected Appointment() {
         // required by JPA
     }
@@ -116,5 +125,13 @@ public class Appointment {
 
     public void setReminderSentAt(LocalDateTime reminderSentAt) {
         this.reminderSentAt = reminderSentAt;
+    }
+
+    public BigDecimal getNetPayable() {
+        return netPayable;
+    }
+
+    public void setNetPayable(BigDecimal netPayable) {
+        this.netPayable = netPayable;
     }
 }

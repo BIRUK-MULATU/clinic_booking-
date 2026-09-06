@@ -3,7 +3,7 @@ import { api, REGISTRATION_MESSAGES } from "../api";
 import { formatMoney } from "../utils";
 import ConfirmButton from "../components/ConfirmButton";
 
-const EMPTY = { name: "", dateOfBirth: "", phone: "", username: "", password: "" };
+const EMPTY = { name: "", dateOfBirth: "", phone: "", username: "", password: "", coveragePercent: 0 };
 
 /**
  * Hospital-expansion: the clinic creates every patient login itself -
@@ -40,6 +40,7 @@ export default function PatientsPage() {
       dateOfBirth: patient.dateOfBirth,
       phone: patient.phone || "",
       password: "",
+      coveragePercent: patient.coveragePercent ?? 0,
     });
   }
 
@@ -51,6 +52,7 @@ export default function PatientsPage() {
         dateOfBirth: editing.dateOfBirth,
         phone: editing.phone,
         password: editing.password || null,
+        coveragePercent: Number(editing.coveragePercent) || 0,
       });
       if (!ok) {
         setError(data?.message || "Could not update the patient.");
@@ -157,6 +159,17 @@ export default function PatientsPage() {
               />
             </div>
           </div>
+          <div className="field" style={{ maxWidth: 200 }}>
+            <label htmlFor="patient-coverage">Insurance coverage (%)</label>
+            <input
+              id="patient-coverage"
+              type="number"
+              min="0"
+              max="100"
+              value={form.coveragePercent}
+              onChange={(e) => set("coveragePercent", e.target.value)}
+            />
+          </div>
           <button
             className="btn btn-primary btn-sm"
             id="create-patient-submit"
@@ -215,6 +228,16 @@ export default function PatientsPage() {
                     placeholder="leave blank to keep"
                   />
                 </div>
+                <div className="field" style={{ marginBottom: 0, maxWidth: 120 }}>
+                  <label>Coverage %</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editing.coveragePercent}
+                    onChange={(e) => setEditing((s) => ({ ...s, coveragePercent: e.target.value }))}
+                  />
+                </div>
                 <button className="btn btn-primary btn-sm" id={`patient-save-${patient.id}`} onClick={saveEdit}
                         style={{ width: "auto" }}>
                   Save
@@ -234,6 +257,11 @@ export default function PatientsPage() {
                 {patient.outstandingBalance > 0 && (
                   <span className="status-pill status-REQUESTED" id={`patient-balance-${patient.id}`}>
                     Owes {formatMoney(patient.outstandingBalance)}
+                  </span>
+                )}
+                {patient.coveragePercent > 0 && (
+                  <span className="status-pill status-CONFIRMED" id={`patient-coverage-${patient.id}`}>
+                    Insured {patient.coveragePercent}%
                   </span>
                 )}
               </div>

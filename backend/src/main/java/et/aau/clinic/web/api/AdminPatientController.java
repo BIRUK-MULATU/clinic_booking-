@@ -78,9 +78,16 @@ public class AdminPatientController {
             return ResponseEntity.ok(new NewPatientResult(false, decision.getReason().name(), null));
         }
 
-        Patient saved = patientRepository.save(new Patient(
+        int coverage = request.coveragePercent() == null ? 0 : request.coveragePercent();
+        if (coverage < 0 || coverage > 100) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Coverage must be between 0 and 100."));
+        }
+
+        Patient patient = new Patient(
                 request.name().trim(), dateOfBirth, request.username().trim(), request.password(),
-                request.phone() == null ? "" : request.phone().trim()));
+                request.phone() == null ? "" : request.phone().trim());
+        patient.setCoveragePercent(coverage);
+        Patient saved = patientRepository.save(patient);
         return ResponseEntity.status(201).body(
                 new NewPatientResult(true, null, PatientAccountResponse.from(saved)));
     }
@@ -100,7 +107,7 @@ public class AdminPatientController {
         }
         // username is the account's identity and is not changed here; password only if a new one is given.
         Patient updated = directoryService.updatePatient(
-                id, request.name(), dateOfBirth, request.phone(), request.password());
+                id, request.name(), dateOfBirth, request.phone(), request.password(), request.coveragePercent());
         return ResponseEntity.ok(PatientAccountResponse.from(updated));
     }
 

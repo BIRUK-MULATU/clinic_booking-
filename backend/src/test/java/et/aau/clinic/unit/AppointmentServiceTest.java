@@ -348,6 +348,37 @@ class AppointmentServiceTest {
         verify(notificationService, never()).sendReminder(eq(later), any());
     }
 
+    // Rule G: the net payable after insurance is captured on the appointment at booking time.
+    @Test
+    void requestBooking_patientWith40PercentCoverage_capturesNetPayableOnTheAppointment() {
+        Patient patient = adultPatient();
+        patient.setCoveragePercent(40);
+        Slot slot = new Slot(FIXED_NOW.plusHours(3));
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingOutcome outcome = service.requestBooking(1L, 2L);
+
+        assertThat(outcome.appointment().getFeeAmount()).isEqualByComparingTo("250");
+        assertThat(outcome.appointment().getNetPayable()).isEqualByComparingTo("150.00"); // 250 - 40%
+    }
+
+    @Test
+    void bookForPatient_patientWithNoCoverage_netPayableEqualsFee() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusHours(3));
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingOutcome outcome = service.bookForPatient(1L, 2L);
+
+        assertThat(outcome.appointment().getNetPayable()).isEqualByComparingTo("250.00");
+    }
+
     @Test
     void remind_confirmedAppointmentWithinWindow_sendsAndReportsDue() {
         Patient patient = adultPatient();

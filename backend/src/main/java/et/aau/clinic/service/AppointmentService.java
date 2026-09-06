@@ -4,6 +4,7 @@ import et.aau.clinic.core.AppointmentEvent;
 import et.aau.clinic.core.AppointmentStateMachine;
 import et.aau.clinic.core.BookingDecision;
 import et.aau.clinic.core.BookingPolicy;
+import et.aau.clinic.core.CoverageCalculator;
 import et.aau.clinic.core.Fee;
 import et.aau.clinic.core.FeeCalculator;
 import et.aau.clinic.core.ReminderDecision;
@@ -109,11 +110,7 @@ public class AppointmentService {
             return new BookingOutcome(decision, null);
         }
 
-        int age = Period.between(patient.getDateOfBirth(), now.toLocalDate()).getYears();
-        Fee fee = FeeCalculator.calculate(age);
-
-        Appointment appointment = new Appointment(
-                patient, slot, AppointmentStatus.REQUESTED, fee.category(), fee.amount(), now);
+        Appointment appointment = newAppointment(patient, slot, AppointmentStatus.REQUESTED, now);
         Appointment saved = appointmentRepository.save(appointment);
         return new BookingOutcome(decision, saved);
     }
@@ -136,11 +133,7 @@ public class AppointmentService {
             return new BookingOutcome(BookingDecision.reject(RejectionReason.SLOT_UNAVAILABLE), null);
         }
 
-        int age = Period.between(patient.getDateOfBirth(), now.toLocalDate()).getYears();
-        Fee fee = FeeCalculator.calculate(age);
-
-        Appointment appointment = new Appointment(
-                patient, slot, AppointmentStatus.CONFIRMED, fee.category(), fee.amount(), now);
+        Appointment appointment = newAppointment(patient, slot, AppointmentStatus.CONFIRMED, now);
         Appointment saved = appointmentRepository.save(appointment);
         notificationService.sendConfirmation(saved.getPatient(), saved);
         return new BookingOutcome(BookingDecision.approve(), saved);
@@ -159,12 +152,21 @@ public class AppointmentService {
         Slot slot = slotRepository.findById(slotId).orElseThrow();
         LocalDateTime now = LocalDateTime.now(clock);
 
+        Appointment appointment = newAppointment(patient, slot, AppointmentStatus.WAITLISTED, now);
+        return appointmentRepository.save(appointment);
+    }
+
+    /**
+     * Builds a fresh appointment with its fee (Rule 1) and net payable after insurance
+     * (Rule G) both captured now, so neither a later birthday nor a later change to the
+     * patient's coverage rewrites this row. Shared by every creation path.
+     */
+    private Appointment newAppointment(Patient patient, Slot slot, AppointmentStatus status, LocalDateTime now) {
         int age = Period.between(patient.getDateOfBirth(), now.toLocalDate()).getYears();
         Fee fee = FeeCalculator.calculate(age);
-
-        Appointment appointment = new Appointment(
-                patient, slot, AppointmentStatus.WAITLISTED, fee.category(), fee.amount(), now);
-        return appointmentRepository.save(appointment);
+        Appointment appointment = new Appointment(patient, slot, status, fee.category(), fee.amount(), now);
+        appointment.setNetPayable(CoverageCalculator.netPayable(fee.amount(), patient.getCoveragePercent()));
+        return appointment;
     }
 
     /**

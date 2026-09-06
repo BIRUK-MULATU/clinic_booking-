@@ -103,10 +103,14 @@ public class DirectoryService {
 
     // --- patients ---
 
-    public Patient updatePatient(Long id, String name, LocalDate dateOfBirth, String phone, String newPassword) {
+    public Patient updatePatient(Long id, String name, LocalDate dateOfBirth, String phone, String newPassword,
+                                 Integer coveragePercent) {
         Patient patient = patientRepository.findById(id).orElseThrow();
         if (isBlank(name)) {
             throw new IllegalArgumentException("A patient needs a name.");
+        }
+        if (coveragePercent != null && (coveragePercent < 0 || coveragePercent > 100)) {
+            throw new IllegalArgumentException("Coverage must be between 0 and 100.");
         }
         if (dateOfBirth == null || dateOfBirth.isAfter(LocalDate.now(clock))
                 || dateOfBirth.isBefore(LocalDate.now(clock).minusYears(120))) {
@@ -121,6 +125,9 @@ public class DirectoryService {
         patient.setPhone(phone == null ? "" : phone.trim());
         if (newPassword != null && !newPassword.isEmpty()) {
             patient.setPassword(newPassword);
+        }
+        if (coveragePercent != null) {
+            patient.setCoveragePercent(coveragePercent);
         }
         return patientRepository.save(patient);
     }

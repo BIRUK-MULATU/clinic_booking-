@@ -10,7 +10,7 @@ import java.math.BigDecimal;
  * back in every list response is needless exposure even in a demo.
  */
 public record PatientAccountResponse(Long id, String name, String dateOfBirth, String phone, String username,
-                                     BigDecimal outstandingBalance) {
+                                     BigDecimal outstandingBalance, int coveragePercent) {
 
     public static PatientAccountResponse from(Patient patient) {
         return new PatientAccountResponse(
@@ -19,6 +19,7 @@ public record PatientAccountResponse(Long id, String name, String dateOfBirth, S
                 patient.getDateOfBirth().toString(),
                 patient.getPhone(),
                 patient.getUsername(),
-                patient.getOutstandingBalance());
+                patient.getOutstandingBalance(),
+                patient.getCoveragePercent());
     }
 }
