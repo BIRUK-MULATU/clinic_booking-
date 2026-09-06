@@ -37,6 +37,24 @@ Build in this order, one phase at a time, stopping after each:
 - Phase E: Visit records. Notes, diagnosis and prescription attached to
   an ATTENDED appointment.
 
+Phases A-E are complete. Later additions, each a pure `core/` rule with
+its own derived tests (traceability comments name the technique):
+
+- Rule F: 24-hour appointment reminder. `ReminderPolicy` decision table
+  + BVA on the 24h window (inclusive). Scheduled sweep + a reception
+  "reminders due" board.
+- Rule G: insurance coverage. `CoverageCalculator`, EP + BVA on the
+  0-100 percentage. `netPayable` captured on the appointment at booking.
+- Rule H: three-strikes no-show suspension. `SuspensionPolicy`, two
+  independent BVA targets - the count (threshold 3) and the 90-day
+  window edge. Gates self-booking only; reception is exempt.
+- Rule I: reschedule. `ReschedulePolicy` decision table + BVA on the 2h
+  notice. New `RESCHEDULE` self-loop in the state machine; reprices from
+  age on the reschedule date.
+- Rule J: waitlist offer expiry. `WaitlistOfferPolicy`, BVA on the 2h
+  acceptance window. New terminal state `OFFER_EXPIRED` + `EXPIRE_OFFER`
+  event; scheduled sweep rolls the slot to the next waitlisted patient.
+
 ## Working agreement
 
 Same as CLAUDE.md: plan first, wait for approval, stop after each phase,
