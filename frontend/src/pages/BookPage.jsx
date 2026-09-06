@@ -76,13 +76,13 @@ export default function BookPage() {
       </div>
 
       {error && (
-        <p className="alert alert-error" id="booking-error">
+        <p className="alert alert-error" id="booking-error" role="alert" aria-live="assertive">
           {error}
         </p>
       )}
 
       <div className="card">
-        {!slot && !error && <p>Loading slot…</p>}
+        {!slot && !error && <p role="status" aria-live="polite">Loading slot…</p>}
         {slot && (
           <>
             <div className="summary-row">
