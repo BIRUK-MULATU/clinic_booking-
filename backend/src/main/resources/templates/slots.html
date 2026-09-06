@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Available Slots</title>
+</head>
+<body>
+<h1 id="page-title">Available Appointment Slots</h1>
+
+<p>Welcome, <span id="patient-name" th:text="${patientName}"></span></p>
+<a id="my-appointments-link" th:href="@{/my-appointments}">My appointments</a>
+<a id="logout-link" th:href="@{/logout}">Log out</a>
+
+<table id="slots-table">
+    <tbody>
+    <tr th:each="slot : ${slots}" th:id="'slot-row-' + ${slot.id}">
+        <td th:id="'slot-time-' + ${slot.id}"
+            th:text="${#temporals.format(slot.startTime, 'yyyy-MM-dd HH:mm')}"></td>
+        <td>
+            <a th:id="'book-link-' + ${slot.id}"
+               th:href="@{/book/{slotId}(slotId=${slot.id})}">Book</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<p id="no-slots-message" th:if="${slots.isEmpty()}">No slots available.</p>
+</body>
+</html>

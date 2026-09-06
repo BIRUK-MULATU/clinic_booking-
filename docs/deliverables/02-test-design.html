@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Test Design Document — Clinic Booking System</title>
+<style>
+  @page { margin: 22mm 18mm; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 10.5pt; line-height: 1.5; }
+  .titleblock { text-align: center; margin-bottom: 10mm; }
+  .titleblock .university { color: #555; font-size: 10pt; letter-spacing: 0.5px; }
+  .titleblock .course { color: #555; font-size: 10pt; margin-bottom: 6mm; }
+  .titleblock h1 { font-size: 22pt; margin: 2mm 0 1mm 0; color: #0b3d66; }
+  .titleblock .subtitle { font-size: 13pt; color: #333; margin-bottom: 6mm; }
+  table.meta { margin: 0 auto; border-collapse: collapse; font-size: 10pt; }
+  table.meta th { text-align: right; padding: 2px 8px; color: #555; font-weight: 600; }
+  table.meta td { text-align: left; padding: 2px 8px; }
+  h2 { color: #0b3d66; font-size: 14pt; border-bottom: 1.5px solid #0b3d66; padding-bottom: 2px; margin-top: 9mm; }
+  h3 { color: #0b3d66; font-size: 11.5pt; margin-top: 6mm; margin-bottom: 2mm; }
+  table.data { border-collapse: collapse; width: 100%; margin: 3mm 0; font-size: 9.7pt; }
+  table.data th, table.data td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
+  table.data th { background: #eef4f9; color: #0b3d66; }
+  table.data td.center, table.data th.center { text-align: center; }
+  code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; font-family: "Courier New", monospace; font-size: 9.3pt; }
+  .note { background: #fff9e6; border-left: 3px solid #e0b400; padding: 2mm 4mm; font-size: 10pt; margin: 3mm 0; }
+  .small { font-size: 9.3pt; color: #555; }
+  .page-break { page-break-before: always; }
+  .yes { color: #1a7a1a; font-weight: 600; }
+  .no { color: #b3261e; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="titleblock">
+  <div class="university">Addis Ababa University — School of Information Technology and Engineering</div>
+  <div class="course">Software Testing and Validation — Final Project</div>
+  <h1>Test Design Document</h1>
+  <div class="subtitle">Clinic Booking System</div>
+  <table class="meta">
+    <tr><th>Group members</th><td>
+      Biruk Mulatu Kibret &mdash; ATE/9686/14<br>
+      Yesehak Abraham Mesfin &mdash; ATE/8291/14<br>
+      Hawa Nursefa Fujaga &mdash; ATE/7005/14<br>
+      Habtamu Zeleke Muluneh &mdash; ATE/7735/14<br>
+      Fenet Teshome Argeta &mdash; ATE/9860/14
+    </td></tr>
+    <tr><th>Instructor</th><td>Abel Tadesse</td></tr>
+    <tr><th>Date</th><td>4 September 2026 (revised 6 September 2026)</td></tr>
+  </table>
+</div>
+
+<p>Sections 1–4 derive test cases for the four course rules (1, 2, 3, 3b) using the four formal
+techniques the assignment requires: equivalence partitioning, boundary value analysis, a decision
+table, and state transition testing. These four rules are the primary vehicle for the techniques —
+each is shaped to feed exactly one — so the working is shown in full here. Section 5 applies the
+same four techniques to the seven extension rules (F–L) more briefly, pointing to the derived cases
+in code. Section 6 adds a fifth technique, pairwise (all-pairs) testing, applied to the booking
+outcome. Every case listed is implemented, by the same name, under
+<code>backend/src/test/java/et/aau/clinic/</code> — the map from design to code is exact, not
+illustrative.</p>
+
+<h2>1. Equivalence partitioning and boundary value analysis — Rule 1 (consultation fee by age)</h2>
+<p>Implemented in <code>core.FeeCalculator</code>. The input is a single integer, <code>age</code>.</p>
+
+<h3>1.1 Partitions</h3>
+<table class="data">
+  <tr><th>#</th><th>Partition</th><th>Range</th><th>Expected outcome</th></tr>
+  <tr><td>P1</td><td>Invalid — below range</td><td>age &lt; 0</td><td>Rejected: <code>IllegalArgumentException</code></td></tr>
+  <tr><td>P2</td><td>CHILD</td><td>0 ≤ age ≤ 17</td><td>Category CHILD, fee 100 ETB</td></tr>
+  <tr><td>P3</td><td>ADULT</td><td>18 ≤ age ≤ 64</td><td>Category ADULT, fee 250 ETB</td></tr>
+  <tr><td>P4</td><td>SENIOR</td><td>65 ≤ age ≤ 120</td><td>Category SENIOR, fee 150 ETB</td></tr>
+  <tr><td>P5</td><td>Invalid — above range</td><td>age &gt; 120</td><td>Rejected: <code>IllegalArgumentException</code></td></tr>
+</table>
+
+<h3>1.2 Boundaries</h3>
+<p>Three valid partitions sitting side by side produce six interior boundaries (the low and high
+edge of each), plus the two outer edges where valid meets invalid — eight boundary values in total,
+exactly the set CLAUDE.md specifies: <strong>−1, 0, 17, 18, 64, 65, 120, 121</strong>.</p>
+
+<h3>1.3 Derived test cases</h3>
+<table class="data">
+  <tr><th>Case</th><th>Input (age)</th><th>Partition / boundary</th><th>Expected</th><th>Test method</th></tr>
+  <tr><td>TC-F01</td><td>−1</td><td>P1, boundary just below P2</td><td>throws</td><td><code>fee_belowLowerBoundary_ageMinus1_throws</code></td></tr>
+  <tr><td>TC-F02</td><td>−50</td><td>P1 interior, far from boundary</td><td>throws</td><td><code>fee_wellBelowRange_ageMinus50_throws</code></td></tr>
+  <tr><td>TC-F03</td><td>0</td><td>P2 lower boundary</td><td>CHILD, 100</td><td><code>fee_atLowerBoundaryOfChildBand_age0_is100</code></td></tr>
+  <tr><td>TC-F04</td><td>9</td><td>P2 interior</td><td>CHILD, 100</td><td><code>fee_withinChildBand_age9_is100</code></td></tr>
+  <tr><td>TC-F05</td><td>17</td><td>P2 upper boundary</td><td>CHILD, 100</td><td><code>fee_atUpperBoundaryOfChildBand_age17_is100</code></td></tr>
+  <tr><td>TC-F06</td><td>18</td><td>P3 lower boundary</td><td>ADULT, 250</td><td><code>fee_atLowerBoundaryOfAdultBand_age18_is250</code></td></tr>
+  <tr><td>TC-F07</td><td>40</td><td>P3 interior</td><td>ADULT, 250</td><td><code>fee_withinAdultBand_age40_is250</code></td></tr>
+  <tr><td>TC-F08</td><td>64</td><td>P3 upper boundary</td><td>ADULT, 250</td><td><code>fee_atUpperBoundaryOfAdultBand_age64_is250</code></td></tr>
+  <tr><td>TC-F09</td><td>65</td><td>P4 lower boundary</td><td>SENIOR, 150</td><td><code>fee_atLowerBoundaryOfSeniorBand_age65_is150</code></td></tr>
+  <tr><td>TC-F10</td><td>90</td><td>P4 interior</td><td>SENIOR, 150</td><td><code>fee_withinSeniorBand_age90_is150</code></td></tr>
+  <tr><td>TC-F11</td><td>120</td><td>P4 upper boundary</td><td>SENIOR, 150</td><td><code>fee_atUpperBoundaryOfSeniorBand_age120_is150</code></td></tr>
+  <tr><td>TC-F12</td><td>121</td><td>P5, boundary just above P4</td><td>throws</td><td><code>fee_aboveUpperBoundary_age121_throws</code></td></tr>
+  <tr><td>TC-F13</td><td>200</td><td>P5 interior, far from boundary</td><td>throws</td><td><code>fee_wellAboveRange_age200_throws</code></td></tr>
+</table>
+<p class="small">13 cases: 3 valid partitions × 3 (low boundary, interior representative, high
+boundary) = 9, plus 2 invalid partitions × 2 (edge value, far-out interior value) = 4.</p>
+
+<h2>2. Decision table — Rule 2 (booking eligibility)</h2>
+<p>Implemented in <code>core.BookingPolicy</code>. Three binary conditions, evaluated in strict
+priority order C1 → C2 → C3:</p>
+<ul>
+  <li><strong>C1</strong> — the requested slot is still free</li>
+  <li><strong>C2</strong> — the patient has no outstanding balance</li>
+  <li><strong>C3</strong> — the request is made at least 2 hours before the slot start time</li>
+</ul>
+
+<h3>2.1 Full table (2³ = 8 rules)</h3>
+<table class="data">
+  <tr><th class="center">Rule</th><th class="center">C1 free</th><th class="center">C2 no balance</th><th class="center">C3 notice ok</th><th>Action</th></tr>
+  <tr><td class="center">R1</td><td class="center no">F</td><td class="center">–</td><td class="center">–</td><td>Reject: SLOT_UNAVAILABLE</td></tr>
+  <tr><td class="center">R2</td><td class="center yes">T</td><td class="center no">F</td><td class="center">–</td><td>Reject: OUTSTANDING_BALANCE</td></tr>
+  <tr><td class="center">R3</td><td class="center yes">T</td><td class="center yes">T</td><td class="center no">F</td><td>Reject: INSUFFICIENT_NOTICE</td></tr>
+  <tr><td class="center">R4</td><td class="center yes">T</td><td class="center yes">T</td><td class="center yes">T</td><td>Approve — appointment created in REQUESTED</td></tr>
+</table>
+<p class="small">Because each condition is checked in priority order with an early return, the naive
+2³ = 8-row truth table collapses to 4 rules with "don't care" (–) columns for conditions a
+higher-priority rule already decided — the same shape the implementation itself has
+(<code>if (!c1) …; if (!c2) …; if (!c3) …; approve</code>).</p>
+
+<h3>2.2 Derived test cases</h3>
+<p>For every rule with a don't-care column, two tests are written — one with the don't-care
+condition true and one false — to prove the outcome genuinely does not depend on it (i.e. that the
+priority ordering really holds and a lower-priority condition can't override a higher one).
+Boundary value analysis is then applied separately to the one numeric condition, C3's 2-hour
+threshold.</p>
+<table class="data">
+  <tr><th>Case</th><th>C1</th><th>C2</th><th>C3 / notice given</th><th>Expected</th><th>Test method</th></tr>
+  <tr><td>TC-B01</td><td class="no">F</td><td class="yes">T</td><td>3h (T)</td><td>SLOT_UNAVAILABLE</td><td><code>decision_slotUnavailable_withGoodBalanceAndNotice_rejectsWithSlotUnavailable</code></td></tr>
+  <tr><td>TC-B02</td><td class="no">F</td><td class="no">F</td><td>30min (F)</td><td>SLOT_UNAVAILABLE (proves C1 outranks C2 and C3)</td><td><code>decision_slotUnavailable_withBadBalanceAndInsufficientNotice_stillRejectsWithSlotUnavailable</code></td></tr>
+  <tr><td>TC-B03</td><td class="yes">T</td><td class="no">F</td><td>3h (T)</td><td>OUTSTANDING_BALANCE</td><td><code>decision_outstandingBalance_withSufficientNotice_rejectsWithOutstandingBalance</code></td></tr>
+  <tr><td>TC-B04</td><td class="yes">T</td><td class="no">F</td><td>30min (F)</td><td>OUTSTANDING_BALANCE (proves C2 outranks C3)</td><td><code>decision_outstandingBalance_withInsufficientNotice_stillRejectsWithOutstandingBalance</code></td></tr>
+  <tr><td>TC-B05</td><td class="yes">T</td><td class="yes">T</td><td>30min (F)</td><td>INSUFFICIENT_NOTICE</td><td><code>decision_insufficientNotice_rejectsWithInsufficientNotice</code></td></tr>
+  <tr><td>TC-B06</td><td class="yes">T</td><td class="yes">T</td><td>3h (T)</td><td>Approved</td><td><code>decision_allConditionsTrue_approves</code></td></tr>
+</table>
+
+<h3>2.3 BVA on the C3 threshold (2-hour notice)</h3>
+<table class="data">
+  <tr><th>Case</th><th>Notice given</th><th>Boundary</th><th>Expected</th><th>Test method</th></tr>
+  <tr><td>TC-B07</td><td>exactly 2h00m</td><td>lower boundary of "sufficient"</td><td>Approved (≥ is inclusive)</td><td><code>notice_exactlyTwoHoursBeforeSlot_isSufficient_approves</code></td></tr>
+  <tr><td>TC-B08</td><td>1h59m (2h − 1min)</td><td>just below the boundary</td><td>INSUFFICIENT_NOTICE</td><td><code>notice_oneMinuteLessThanTwoHours_isInsufficient_rejects</code></td></tr>
+  <tr><td>TC-B09</td><td>10h</td><td>well above the boundary</td><td>Approved</td><td><code>notice_wellOverTwoHours_isSufficient_approves</code></td></tr>
+</table>
+
+<h2>3. State transition testing — Rule 3 (appointment lifecycle)</h2>
+<p>Implemented in <code>core.AppointmentStateMachine</code>. The original course design is 5 states
+× 4 events. The extensions grew the machine <em>by extension, never by rewrite</em> — the original
+REQUESTED/CONFIRMED blocks are unchanged:</p>
+<ul class="small">
+  <li>Phase C added the <code>WAITLISTED</code> state and the <code>PROMOTE</code> event.</li>
+  <li>Rule K added <code>RESCHEDULE</code> — a slot move that keeps the appointment in its current
+      state, so REQUESTED and CONFIRMED each get a self-loop.</li>
+  <li>Rule L added the terminal <code>OFFER_EXPIRED</code> state and the <code>EXPIRE_OFFER</code>
+      event (a promoted waitlist offer not accepted within 2 hours).</li>
+</ul>
+<p>Final machine: states <code>REQUESTED, CONFIRMED, ATTENDED, CANCELLED, NO_SHOW, WAITLISTED,
+OFFER_EXPIRED</code>; events <code>CONFIRM, CANCEL, ATTEND, MARK_NO_SHOW, PROMOTE, RESCHEDULE,
+EXPIRE_OFFER</code>. 7 × 7 = <strong>49 pairs: 10 valid, 39 invalid</strong>.</p>
+
+<h3>3.1 State transition table</h3>
+<table class="data">
+  <tr><th>From \ Event</th><th class="center">CONFIRM</th><th class="center">CANCEL</th><th class="center">ATTEND</th><th class="center">MARK_NO_SHOW</th><th class="center">PROMOTE</th><th class="center">RESCHEDULE</th><th class="center">EXPIRE_OFFER</th></tr>
+  <tr><td><strong>REQUESTED</strong></td><td class="center yes">→ CONFIRMED</td><td class="center yes">→ CANCELLED</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center yes">→ REQUESTED</td><td class="center yes">→ OFFER_EXPIRED</td></tr>
+  <tr><td><strong>CONFIRMED</strong></td><td class="center no">inv</td><td class="center yes">→ CANCELLED</td><td class="center yes">→ ATTENDED</td><td class="center yes">→ NO_SHOW</td><td class="center no">inv</td><td class="center yes">→ CONFIRMED</td><td class="center no">inv</td></tr>
+  <tr><td><strong>WAITLISTED</strong></td><td class="center no">inv</td><td class="center yes">→ CANCELLED</td><td class="center no">inv</td><td class="center no">inv</td><td class="center yes">→ REQUESTED</td><td class="center no">inv</td><td class="center no">inv</td></tr>
+  <tr><td><strong>ATTENDED</strong> (terminal)</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td></tr>
+  <tr><td><strong>CANCELLED</strong> (terminal)</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td></tr>
+  <tr><td><strong>NO_SHOW</strong> (terminal)</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td></tr>
+  <tr><td><strong>OFFER_EXPIRED</strong> (terminal)</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td></tr>
+</table>
+<p class="small">Valid by row: REQUESTED 4, CONFIRMED 4, WAITLISTED 2, four terminal states 0 =
+<strong>10 valid</strong>. Invalid = 49 − 10 = <strong>39</strong>. REQUESTED and WAITLISTED are
+entered by construction (a fresh booking, or one made when the slot was taken), not by transition.</p>
+
+<h3>3.2 Derived test cases — valid transitions</h3>
+<table class="data">
+  <tr><th>Case</th><th>From</th><th>Event</th><th>Expected</th><th>Test method</th></tr>
+  <tr><td>TC-S01</td><td>REQUESTED</td><td>CONFIRM</td><td>CONFIRMED</td><td><code>transition_requestedConfirm_movesToConfirmed</code></td></tr>
+  <tr><td>TC-S02</td><td>REQUESTED</td><td>CANCEL</td><td>CANCELLED</td><td><code>transition_requestedCancel_movesToCancelled</code></td></tr>
+  <tr><td>TC-S03</td><td>CONFIRMED</td><td>ATTEND</td><td>ATTENDED</td><td><code>transition_confirmedAttend_movesToAttended</code></td></tr>
+  <tr><td>TC-S04</td><td>CONFIRMED</td><td>CANCEL</td><td>CANCELLED</td><td><code>transition_confirmedCancel_movesToCancelled</code></td></tr>
+  <tr><td>TC-S05</td><td>CONFIRMED</td><td>MARK_NO_SHOW</td><td>NO_SHOW</td><td><code>transition_confirmedMarkNoShow_movesToNoShow</code></td></tr>
+  <tr><td>TC-S09</td><td>WAITLISTED</td><td>PROMOTE</td><td>REQUESTED</td><td><code>transition_waitlistedPromote_movesToRequested</code></td></tr>
+  <tr><td>TC-S10</td><td>WAITLISTED</td><td>CANCEL</td><td>CANCELLED</td><td><code>transition_waitlistedCancel_movesToCancelled</code></td></tr>
+  <tr><td>TC-S11</td><td>REQUESTED</td><td>RESCHEDULE</td><td>REQUESTED (self-loop)</td><td><code>transition_requestedReschedule_staysRequested</code></td></tr>
+  <tr><td>TC-S12</td><td>CONFIRMED</td><td>RESCHEDULE</td><td>CONFIRMED (self-loop)</td><td><code>transition_confirmedReschedule_staysConfirmed</code></td></tr>
+  <tr><td>TC-S13</td><td>REQUESTED</td><td>EXPIRE_OFFER</td><td>OFFER_EXPIRED</td><td><code>transition_requestedExpireOffer_movesToOfferExpired</code></td></tr>
+</table>
+<p class="small">(TC-S06–S08 are the Rule 3b boundary cases, §3.4.)</p>
+
+<h3>3.3 Derived test cases — invalid transitions</h3>
+<p>Rather than hand-listing 39 rows (error-prone — easy to miss or duplicate a pair), the test
+generates <em>all</em> 49 state/event pairs and subtracts the 10 valid ones above, then runs a
+single parameterised test (<code>transition_invalidPair_throwsIllegalStateException</code>) once per
+remaining pair, asserting each throws <code>IllegalStateException</code>. A companion test
+(<code>invalidStateEventPairs_containsExactlyThirtyNinePairs</code>) asserts the generated set has
+exactly 39 members, so the count itself — not just each individual case — is under test. The test
+file also carries the hand-derivation of the "10 valid / 39 invalid" split, row by row, so the
+grid can be re-checked by inspection. This guarantees full coverage of the invalid region without
+the risk of a manually transcribed list silently missing a cell.</p>
+
+<h3>3.4 BVA — Rule 3b, late cancellation fee (24-hour guard)</h3>
+<p>A cancellation of a CONFIRMED appointment charges 50% of the consultation fee if made less than
+24 hours before the slot start, and nothing otherwise. This is a second, independent boundary
+layered on the CANCEL transition.</p>
+<table class="data">
+  <tr><th>Case</th><th>Time before slot</th><th>Boundary</th><th>Expected fee (on 250 ETB)</th><th>Test method</th></tr>
+  <tr><td>TC-S06</td><td>23h59m</td><td>just inside the late window</td><td>125.0 (50%)</td><td><code>lateCancellationFee_atTwentyThreeHours59Minutes_chargesHalfFee</code></td></tr>
+  <tr><td>TC-S07</td><td>exactly 24h00m</td><td>the boundary itself</td><td>0 (free — 24h is not "less than")</td><td><code>lateCancellationFee_atExactlyTwentyFourHours_isFree</code></td></tr>
+  <tr><td>TC-S08</td><td>24h01m</td><td>just outside the late window</td><td>0 (free)</td><td><code>lateCancellationFee_atTwentyFourHoursOneMinute_isFree</code></td></tr>
+</table>
+
+<h2>4. Summary — course rules</h2>
+<table class="data">
+  <tr><th>Technique</th><th>Applied to</th><th>Test cases derived</th></tr>
+  <tr><td>Equivalence partitioning + BVA</td><td>Rule 1 (fee by age)</td><td>13</td></tr>
+  <tr><td>Decision table + BVA</td><td>Rule 2 (booking eligibility)</td><td>9</td></tr>
+  <tr><td>State transition testing</td><td>Rule 3 (lifecycle) — 10 valid + 39 invalid</td><td>10 explicit valid + 39 via one parameterised test + 1 count-check</td></tr>
+  <tr><td>BVA</td><td>Rule 3b (late cancellation fee)</td><td>3</td></tr>
+</table>
+
+<h2 class="page-break">5. The same four techniques applied to the extension rules (F–L)</h2>
+<p>Each extension rule is a pure function in <code>et.aau.clinic.core</code> with a class-level
+comment naming its technique and its boundaries, and a dedicated <code>*Test</code> class whose
+methods carry <code>TC-</code> traceability comments. The derivations are summarised here; the
+full case lists are in the test classes named below.</p>
+<table class="data">
+  <tr><th>Rule</th><th>Class</th><th>Technique(s)</th><th>Partitions / rules / boundaries</th><th>Test class (cases)</th></tr>
+  <tr><td>F — patient registration</td><td><code>PatientRegistrationPolicy</code></td>
+      <td>Decision table (5 conditions, priority order) + BVA</td>
+      <td>C1 name present · C2 username present · C3 not taken · C4 password ≥ 4 chars · C5 DOB in
+      the past and age ≤ 120. Boundaries: password length 3 vs 4; DOB today vs tomorrow; exactly
+      120y vs 120y + 1d; null password; null DOB.</td>
+      <td><code>PatientRegistrationPolicyTest</code> (TC-R01–R16 + TC-R10b)</td></tr>
+  <tr><td>G — doctor daily load</td><td><code>DoctorLoad</code></td>
+      <td>Equivalence partitioning + BVA</td>
+      <td>Partitions AVAILABLE / NEARLY_FULL / FULL over "scheduled ÷ limit". Boundaries around the
+      limit: one below, exactly at, one over.</td>
+      <td><code>DoctorLoadTest</code> (TC-G01–G08)</td></tr>
+  <tr><td>H — 24-hour reminder</td><td><code>ReminderPolicy</code></td>
+      <td>Decision table (4 conditions, priority order) + BVA</td>
+      <td>C1 CONFIRMED · C2 not already reminded · C3 slot not started · C4 within 24h. Window is
+      inclusive; boundaries 24h01m (skip), exactly 24h00m (send), 0h01m (send), slot already
+      started.</td>
+      <td><code>ReminderPolicyTest</code> (TC-H01–H12; 17 executions with the parameterised
+      non-CONFIRMED status case)</td></tr>
+  <tr><td>I — insurance coverage</td><td><code>CoverageCalculator</code></td>
+      <td>Equivalence partitioning + BVA</td>
+      <td>Partitions invalid-low (&lt; 0) / valid [0, 100] / invalid-high (&gt; 100). Boundaries
+      −1, 0, 1, 99, 100, 101, plus a rounding case.</td>
+      <td><code>CoverageCalculatorTest</code> (TC-I01–I09)</td></tr>
+  <tr><td>J — no-show suspension</td><td><code>SuspensionPolicy</code></td>
+      <td>BVA on two independent axes + EP</td>
+      <td>Count threshold: 2 clear, 3 suspended, 4 suspended. 90-day window edge: 89d inside,
+      exactly 90d inside (inclusive), 90d + 1 aged out. EP: each no-show timestamp in-window vs
+      aged out.</td>
+      <td><code>SuspensionPolicyTest</code> (TC-J01–J08)</td></tr>
+  <tr><td>K — reschedule</td><td><code>ReschedulePolicy</code></td>
+      <td>Decision table (3 conditions, priority order) + BVA + state transition (see §3)</td>
+      <td>C1 state reschedulable · C2 new slot free · C3 ≥ 2h notice on the new slot. BVA on the
+      2-hour notice: 1h59m rejects, exactly 2h00m allowed. Plus the RESCHEDULE self-loops in the
+      state machine (TC-S11, S12).</td>
+      <td><code>ReschedulePolicyTest</code> (TC-K01–K07)</td></tr>
+  <tr><td>L — waitlist offer expiry</td><td><code>WaitlistOfferPolicy</code></td>
+      <td>BVA on a single guard + state transition (see §3)</td>
+      <td>2-hour acceptance window: 1h59m still live, exactly 2h00m expired (inclusive), 2h01m
+      expired. Plus the EXPIRE_OFFER → OFFER_EXPIRED transition (TC-S13).</td>
+      <td><code>WaitlistOfferPolicyTest</code> (TC-L01–L04)</td></tr>
+</table>
+
+<h2>6. Pairwise (all-pairs) testing — self-service booking</h2>
+<p>A fifth technique, combinatorial testing, is applied to the booking outcome, which depends on
+six independent factors: age band (3 values), slot free (2), balance (2), notice (2), suspension
+(2) and coverage (3) — a 3 × 2 × 2 × 2 × 2 × 3 = <strong>144</strong>-combination space.</p>
+<p>A greedy all-pairs generator (<code>docs/pairwise-booking-gen.py</code>, reproducible) produces
+a <strong>10-row covering array</strong> in which every pair of factor values co-occurs in at least
+one row — the standard all-pairs criterion — seeded with the three approve-path rows so each
+age × coverage fee combination is also checked on a successful booking. One supplementary row is
+added so <code>OUTSTANDING_BALANCE</code> appears as an actually-reported reason (in the covering
+array it is always masked by a higher-priority condition). Total: <strong>11 cases</strong>,
+TC-P01–P11, in <code>BookingPairwiseIT</code>. The factor table, the covering array, the
+expected-outcome derivation and the observation that "pairwise coverage of the inputs does not
+imply coverage of the outcomes" are written up in <code>docs/pairwise-booking.md</code>.</p>
+
+<h2>7. Where each technique is demonstrated (Part B checklist)</h2>
+<table class="data">
+  <tr><th>Technique</th><th>Primary demonstration</th><th>Further instances</th></tr>
+  <tr><td>Equivalence partitioning</td><td>Rule 1 (§1)</td><td>Rules G, I; each no-show timestamp in Rule J</td></tr>
+  <tr><td>Boundary value analysis</td><td>Rule 1 (§1), Rule 3b (§3.4)</td><td>Rule 2 C3 (§2.3); Rules F, G, H, I, J, K, L</td></tr>
+  <tr><td>Decision table</td><td>Rule 2 (§2)</td><td>Rules F, H, K</td></tr>
+  <tr><td>State transition testing</td><td>Rule 3 (§3) — 7 × 7 grid</td><td>Rules K and L extend the same machine</td></tr>
+  <tr><td>Pairwise / combinatorial</td><td>Booking outcome (§6)</td><td>—</td></tr>
+</table>
+
+</body>
+</html>

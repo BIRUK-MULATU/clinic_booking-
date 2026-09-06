@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Defect Log and Metrics — Clinic Booking System</title>
+<style>
+  @page { margin: 22mm 18mm; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 10.5pt; line-height: 1.5; }
+  .titleblock { text-align: center; margin-bottom: 10mm; }
+  .titleblock .university { color: #555; font-size: 10pt; letter-spacing: 0.5px; }
+  .titleblock .course { color: #555; font-size: 10pt; margin-bottom: 6mm; }
+  .titleblock h1 { font-size: 22pt; margin: 2mm 0 1mm 0; color: #0b3d66; }
+  .titleblock .subtitle { font-size: 13pt; color: #333; margin-bottom: 6mm; }
+  table.meta { margin: 0 auto; border-collapse: collapse; font-size: 10pt; }
+  table.meta th { text-align: right; padding: 2px 8px; color: #555; font-weight: 600; }
+  table.meta td { text-align: left; padding: 2px 8px; }
+  h2 { color: #0b3d66; font-size: 14pt; border-bottom: 1.5px solid #0b3d66; padding-bottom: 2px; margin-top: 9mm; }
+  h3 { color: #0b3d66; font-size: 11.5pt; margin-top: 6mm; margin-bottom: 2mm; }
+  table.data { border-collapse: collapse; width: 100%; margin: 3mm 0; font-size: 9.7pt; }
+  table.data th, table.data td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
+  table.data th { background: #eef4f9; color: #0b3d66; }
+  code { background: #f2f2f2; padding: 1px 4px; border-radius: 3px; font-family: "Courier New", monospace; font-size: 9.3pt; }
+  pre { background: #f7f7f7; border: 1px solid #ddd; padding: 3mm; font-size: 8.7pt; overflow-x: auto; border-radius: 3px; }
+  .note { background: #fff9e6; border-left: 3px solid #e0b400; padding: 2mm 4mm; font-size: 10pt; margin: 3mm 0; }
+  .small { font-size: 9.3pt; color: #555; }
+  .page-break { page-break-before: always; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 9pt; font-weight: 600; }
+  .badge.closed { background: #dff3df; color: #1a7a1a; }
+  .sev-med { color: #b3720b; font-weight: 600; }
+  .sev-low { color: #666; font-weight: 600; }
+  .pri-high { color: #b3261e; font-weight: 600; }
+  .pri-med { color: #b3720b; font-weight: 600; }
+  .defect { margin-bottom: 8mm; padding-bottom: 4mm; border-bottom: 1px solid #ddd; }
+  .defect h3 { margin-bottom: 1mm; }
+  .meta-line { font-size: 9.5pt; color: #444; margin-bottom: 2mm; }
+</style>
+</head>
+<body>
+
+<div class="titleblock">
+  <div class="university">Addis Ababa University — School of Information Technology and Engineering</div>
+  <div class="course">Software Testing and Validation — Final Project</div>
+  <h1>Defect Log and Metrics</h1>
+  <div class="subtitle">Clinic Booking System</div>
+  <table class="meta">
+    <tr><th>Group members</th><td>
+      Biruk Mulatu Kibret &mdash; ATE/9686/14<br>
+      Yesehak Abraham Mesfin &mdash; ATE/8291/14<br>
+      Hawa Nursefa Fujaga &mdash; ATE/7005/14<br>
+      Habtamu Zeleke Muluneh &mdash; ATE/7735/14<br>
+      Fenet Teshome Argeta &mdash; ATE/9860/14
+    </td></tr>
+    <tr><th>Instructor</th><td>Abel Tadesse</td></tr>
+    <tr><th>Date</th><td>4 September 2026 (revised 6 September 2026)</td></tr>
+  </table>
+</div>
+
+<h2>1. Defect log</h2>
+<p>Five real defects were found and fixed during development — all through the project's own
+automated testing effort, none reported by an external user (there being none, this being a course
+project). DEF-001 to DEF-003 were found in the original course scope; DEF-004 and DEF-005 during
+the extension work. Each entry below follows the lifecycle New → In Progress → Fixed → Verified →
+Closed. Severity is impact if shipped as-is; priority is urgency relative to other work. The full
+log with every reproduction step is kept in <code>docs/defect-log.md</code>.</p>
+
+<div class="defect">
+  <h3>DEF-001 — Integration tests fail intermittently with a unique-constraint violation</h3>
+  <div class="meta-line">
+    <strong>Severity:</strong> <span class="sev-med">Medium</span> &nbsp;·&nbsp;
+    <strong>Priority:</strong> <span class="pri-high">High</span> &nbsp;·&nbsp;
+    <strong>Status:</strong> <span class="badge closed">Closed</span> &nbsp;·&nbsp;
+    <strong>Found:</strong> Phase 6, first run of <code>AppointmentServiceIT</code> &nbsp;·&nbsp;
+    <strong>Component:</strong> <code>integration/AppointmentServiceIT.java</code>
+  </div>
+  <p><strong>Steps to reproduce:</strong> Write <code>AppointmentServiceIT</code> as a plain
+  <code>@SpringBootTest</code> (no <code>@Transactional</code>) with a <code>@BeforeEach</code> that
+  inserts a <code>Patient</code> with a fixed username. Run <code>mvn clean verify</code>.</p>
+  <p><strong>Expected:</strong> All test methods in the class pass independently.</p>
+  <p><strong>Actual:</strong> The first method passes; every subsequent method fails:</p>
+  <pre>org.springframework.dao.DataIntegrityViolationException: ... Unique index
+or primary key violation: "PUBLIC.CONSTRAINT_INDEX_F ON
+PUBLIC.PATIENT(USERNAME NULLS FIRST) VALUES ( /* 1 */ 'tigist' )"</pre>
+  <p><strong>Root cause:</strong> <code>@SpringBootTest</code> reuses one application context (and
+  one H2 instance, via <code>DB_CLOSE_DELAY=-1</code>) across every method in the class. Without
+  <code>@Transactional</code>, writes commit immediately and are never rolled back, so the second
+  <code>@BeforeEach</code> collides with the first test's committed row.</p>
+  <p><strong>Fix:</strong> Added class-level <code>@Transactional</code> to
+  <code>AppointmentServiceIT</code> and <code>AppointmentJourneyIT</code>, so each method's writes
+  roll back at the end of the method. Deliberately <em>not</em> applied to the Selenium
+  <code>BookingJourneyIT</code>: Selenium drives the app over a real HTTP socket from a separate
+  thread, so an open test-thread transaction would be invisible to the server thread — that class
+  avoids the collision with a distinct seeded username per test instead.</p>
+  <p><strong>Verification:</strong> <code>mvn clean verify</code> passes with all methods green,
+  run repeatedly.</p>
+</div>
+
+<div class="defect">
+  <h3>DEF-002 — CI coverage-summary step fails with a confusing secondary error whenever the build already failed</h3>
+  <div class="meta-line">
+    <strong>Severity:</strong> <span class="sev-low">Low</span> &nbsp;·&nbsp;
+    <strong>Priority:</strong> <span class="pri-med">Medium</span> &nbsp;·&nbsp;
+    <strong>Status:</strong> <span class="badge closed">Closed</span> &nbsp;·&nbsp;
+    <strong>Found:</strong> during the deliberate regression demo (§3) &nbsp;·&nbsp;
+    <strong>Component:</strong> <code>.github/workflows/ci.yml</code>, "Publish coverage summary" step
+  </div>
+  <p><strong>Steps to reproduce:</strong> Break a test in <code>et.aau.clinic.core</code> so
+  <code>mvn clean verify</code> fails during the unit-test phase; push to a branch and let the
+  GitHub Actions <code>CI</code> workflow run.</p>
+  <p><strong>Expected:</strong> Only the real test failure is reported; the coverage-summary step is
+  skipped or clearly reports "no coverage available".</p>
+  <p><strong>Actual:</strong> The "Publish coverage summary" step (bound with <code>if: always()</code>)
+  also fails, burying the real failure:</p>
+  <pre>awk: fatal: cannot open file `target/site/jacoco/jacoco.csv' for reading: No such file or directory
+Error: Process completed with exit code 2.</pre>
+  <p><strong>Root cause:</strong> <code>jacoco.csv</code> is produced by a plugin goal bound to
+  Maven's <code>verify</code> phase. Maven's fail-fast behaviour stops the build at the first
+  failing phase, so when unit tests fail in the earlier <code>test</code> phase, <code>verify</code>
+  never runs and the CSV is never written — but the summary step assumed it always would be.</p>
+  <p><strong>Fix:</strong> Added a file-existence check at the top of the step: if
+  <code>jacoco.csv</code> is missing, write a one-line "no coverage report was generated" note to
+  the job summary and exit 0 instead of trying to parse a file that was never created.</p>
+  <p><strong>Verification:</strong> Reproduced by the deliberate regression commit
+  <code>9b6c9fe</code> (failing run 33305001970), fixed in the commit that reverted the regression,
+  <code>4a98ab9</code> (passing run 33305212152) — see §3.</p>
+</div>
+
+<div class="defect">
+  <h3>DEF-003 — Selenium system test is flaky under constrained CPU (Jenkins-in-Docker)</h3>
+  <div class="meta-line">
+    <strong>Severity:</strong> <span class="sev-med">Medium</span> &nbsp;·&nbsp;
+    <strong>Priority:</strong> <span class="pri-high">High</span> &nbsp;·&nbsp;
+    <strong>Status:</strong> <span class="badge closed">Closed</span> &nbsp;·&nbsp;
+    <strong>Found:</strong> first real Jenkins pipeline run against <code>docker/jenkins/</code> &nbsp;·&nbsp;
+    <strong>Component:</strong> <code>system/pages/*.java</code> (Page Objects)
+  </div>
+  <p><strong>Steps to reproduce:</strong> Run <code>BookingJourneyIT</code> in an environment with
+  limited CPU relative to a GitHub-hosted runner (the Jenkins Docker container on a shared host).
+  The page objects called <code>driver.findElement(...)</code> directly, immediately after a
+  <code>.click()</code> that triggers a server-side redirect.</p>
+  <p><strong>Expected:</strong> The system test passes reliably regardless of server response speed.</p>
+  <p><strong>Actual:</strong></p>
+  <pre>org.openqa.selenium.NoSuchElementException: no such element: Unable to
+locate element: {"method":"css selector","selector":"#confirmation-status"}</pre>
+  <p>The same test passed reliably in GitHub Actions (hosted runner, more CPU) but failed the first
+  time it ran inside the Jenkins container.</p>
+  <p><strong>Root cause:</strong> Selenium's WebDriver spec only guarantees <code>click()</code>
+  blocks until a triggered navigation <em>starts</em>, not until the resulting page has finished
+  rendering. The page objects implicitly assumed the next page was already rendered — a race
+  condition that held on a fast, lightly-loaded runner and broke under the container's tighter CPU
+  budget.</p>
+  <p><strong>Fix:</strong> Added <code>AbstractPage</code>, a common base class for all five page
+  objects, with a <code>find(...)</code> helper backed by <code>WebDriverWait</code> +
+  <code>ExpectedConditions.presenceOfElementLocated</code> (10s timeout). Every locator call now
+  waits for its target element instead of assuming it is already there.</p>
+  <p><strong>Verification:</strong> Reproduced in the Jenkins container (build #3 of
+  <code>clinic-booking-pipeline</code>), fixed and verified locally, then re-run in the same
+  container (build #4: <code>Finished: SUCCESS</code>) to confirm under the same constrained
+  conditions that first exposed it.</p>
+  <p>The fix reduces the failure rate rather than proving the race eliminated - an explicit wait
+  shortens the window, it does not remove it. As a data point: the same failure family recurred
+  once on 2026-09-05 on a plain local <code>mvn clean verify</code> rerun under heavier-than-usual
+  load, and was gone on immediate retry. Treated as mitigated, not closed against recurrence under
+  sufficiently adverse timing.</p>
+</div>
+
+<div class="defect">
+  <h3>DEF-004 — JSON API returned an HTML error page with HTTP 200 for a thrown business exception</h3>
+  <div class="meta-line">
+    <strong>Severity:</strong> <span class="sev-med">Medium</span> &nbsp;·&nbsp;
+    <strong>Priority:</strong> <span class="pri-high">High</span> &nbsp;·&nbsp;
+    <strong>Status:</strong> <span class="badge closed">Closed</span> &nbsp;·&nbsp;
+    <strong>Found:</strong> adding the admin CRUD delete endpoints (<code>AdminCrudIT</code>) &nbsp;·&nbsp;
+    <strong>Component:</strong> <code>web/api/ApiExceptionHandler.java</code> vs <code>web/GlobalExceptionHandler.java</code>
+  </div>
+  <p><strong>Steps to reproduce:</strong> Call <code>DELETE /api/slots/{id}</code> for a slot that
+  has an appointment against it; the handler throws <code>IllegalStateException</code>.</p>
+  <p><strong>Expected:</strong> <code>400</code> with a JSON <code>{ "message": "..." }</code> body,
+  via the API-scoped <code>ApiExceptionHandler</code>.</p>
+  <p><strong>Actual:</strong> <code>200</code> with <code>Content-Type: text/html</code> and the
+  body of <code>error.html</code> — which the React client's <code>fetch</code> wrapper cannot
+  parse.</p>
+  <p><strong>Root cause:</strong> Two <code>@ControllerAdvice</code> beans both declared
+  <code>@ExceptionHandler</code> for <code>IllegalStateException</code>/<code>IllegalArgumentException</code>:
+  the API-scoped <code>ApiExceptionHandler</code> and the global <code>GlobalExceptionHandler</code>
+  (which returns the view name <code>"error"</code>). Neither carried an <code>@Order</code>, so
+  both sat at <code>LOWEST_PRECEDENCE</code> and the ordering between them was undefined — in this
+  build the global one won for the new <code>DELETE</code> handlers. This is a genuine defect in
+  <strong>application code</strong>, not test infrastructure.</p>
+  <p><strong>Fix:</strong> Added <code>@Order(Ordered.HIGHEST_PRECEDENCE)</code> to
+  <code>ApiExceptionHandler</code>. It is package-scoped to <code>et.aau.clinic.web.api</code>, so
+  making it highest precedence cannot affect the Thymeleaf controllers.</p>
+  <p><strong>Verification:</strong> <code>AdminCrudIT</code> (11 tests) — the guarded deletes now
+  return <code>400</code> with a JSON message; <code>mvn clean verify</code> green.</p>
+</div>
+
+<div class="defect">
+  <h3>DEF-005 — Concurrent bookings of the same slot both succeed (slot double-booked)</h3>
+  <div class="meta-line">
+    <strong>Severity:</strong> <span class="pri-high">High</span> &nbsp;·&nbsp;
+    <strong>Priority:</strong> <span class="pri-med">Medium</span> &nbsp;·&nbsp;
+    <strong>Status:</strong> <span class="badge closed">Closed</span> &nbsp;·&nbsp;
+    <strong>Found:</strong> deliberately, adding a concurrency test for Rule 2's C1 &nbsp;·&nbsp;
+    <strong>Component:</strong> <code>service/AppointmentService</code>, <code>repository/SlotRepository</code>
+  </div>
+  <p><strong>Steps to reproduce:</strong> <code>BookingConcurrencyIT</code> — 8 patients call
+  <code>requestBooking</code> for one slot from 8 threads released together by a
+  <code>CountDownLatch</code>.</p>
+  <p><strong>Expected:</strong> Exactly one booking approved; the rest rejected
+  <code>SLOT_UNAVAILABLE</code>. Exactly one active appointment for the slot afterwards.</p>
+  <p><strong>Actual (pre-fix):</strong> 2–4 threads (timing-dependent) read the slot as free before
+  any had committed its insert, so multiple <code>REQUESTED</code> rows were created for the one
+  slot. Confirmed by reverting the fix: the test fails with <code>expected: 1</code> on the
+  approved count.</p>
+  <p><strong>Root cause:</strong> Classic check-then-act race. <code>requestBooking</code> read
+  "is the slot free?" and then inserted the appointment as two separate statements with no lock
+  spanning them, and the method was not transactional. This defect is in <strong>application
+  code</strong>, and it is exactly the "multi-user concurrency" case the original test plan had
+  listed as out of scope — the concurrency test brought it into scope and found it.</p>
+  <p><strong>Fix:</strong> A <code>@Lock(PESSIMISTIC_WRITE)</code> query
+  (<code>SlotRepository.findByIdForUpdate</code>) plus <code>@Transactional</code> on
+  <code>requestBooking</code>, <code>bookForPatient</code> and <code>reschedule</code>. The
+  row-level write lock on the slot serialises the check-then-insert section, so the second caller
+  blocks until the first commits, then sees its appointment and is rejected normally.</p>
+  <p><strong>Verification:</strong> <code>BookingConcurrencyIT</code> passes with the fix and fails
+  without it (verified by reverting). Full <code>mvn clean verify</code> green; all other tests
+  unaffected.</p>
+</div>
+
+<h2>2. Metrics</h2>
+<p class="small">All figures recomputed from a fresh <code>mvn clean verify</code> +
+<code>pitest:mutationCoverage</code> run on 2026-09-06, on the merged <code>main</code>.</p>
+<table class="data">
+  <tr><th>Metric</th><th>Value</th><th>Interpretation</th></tr>
+  <tr>
+    <td>Defect density</td>
+    <td>5 defects / ≈9.9 KLOC delivered (5,138 lines production code + 4,778 lines test code)
+        ≈ <strong>0.5 defects/KLOC</strong></td>
+    <td>2 of the 5 defects (DEF-004, DEF-005) are in application code; the other 3 are in test
+        infrastructure (DEF-001, DEF-003) or CI scripting (DEF-002). Against production code
+        alone the figure is ≈0.4/KLOC. Both application defects are in the extension work, not the
+        original course rules — the four course rules, derived test-first from formal techniques,
+        have had no defect found in them at any point. Density fell from the earlier 1.4/KLOC
+        mainly because the codebase roughly quadrupled while the defect count grew by two.</td>
+  </tr>
+  <tr>
+    <td>Defect removal efficiency (DRE)</td>
+    <td>5 found internally / (5 found + 0 escaped) = <strong>100%</strong></td>
+    <td>Every defect was caught by the project's own automated suite or its CI runs, before any
+        external party exercised the system. DEF-005 in particular was found only because a
+        concurrency test was written specifically to probe a gap the test plan had flagged. This
+        figure is 100% only because the project has not yet passed an external evaluation gate —
+        see the residual-risk discussion in the test summary report.</td>
+  </tr>
+  <tr>
+    <td>Defects found vs. escaped</td>
+    <td><strong>5 found, 0 escaped</strong> (as of 2026-09-06, pre-submission)</td>
+    <td>"Escaped" only becomes a meaningful category once the instructor's evaluation runs.</td>
+  </tr>
+  <tr>
+    <td>Branch coverage — <code>et.aau.clinic.core</code> (the graded target)</td>
+    <td><strong>100%</strong> (134/134 branches), against an 80% gate enforced by
+        <code>jacoco:check</code></td>
+    <td>Every branch in all 10 pure business-rule classes (the four course rules plus F–L) is
+        exercised — a direct consequence of deriving tests systematically from
+        EP/BVA/decision-table/state-transition/pairwise analysis (Part B) rather than writing tests
+        ad hoc. One branch (a null-password guard in Rule F) surfaced uncovered during the
+        branch merge and was closed with a dedicated case (TC-R10b).</td>
+  </tr>
+  <tr>
+    <td><strong>Mutation score</strong> — <code>et.aau.clinic.core</code> (PIT)</td>
+    <td><strong>100%</strong> (165/165 mutants killed), against a 90% gate enforced by PIT's
+        <code>mutationThreshold</code></td>
+    <td>Stronger evidence than branch coverage: PIT injected 165 mutations across the 10 rule
+        classes (flipping <code>&lt;</code> to <code>&le;</code>, changing threshold constants,
+        replacing return values, negating conditions) and <em>every one</em> was detected by a
+        failing test. This shows the boundary and decision-table cases are derived tightly enough
+        that a small change to the logic cannot pass unnoticed. See
+        <code>docs/mutation-testing.md</code>.</td>
+  </tr>
+  <tr>
+    <td>Branch coverage — whole application (excluding <code>domain</code>, <code>config</code>,
+        <code>ClinicApplication</code>, per the JaCoCo exclusions in <code>pom.xml</code>)</td>
+    <td><strong>72.5%</strong> branch (332/458); instruction 81.8% (4,416/5,398); line 83.5%
+        (947/1,134) — across 83 analysed classes</td>
+    <td>The gate only requires <code>core/</code>, which is at 100%. The whole-application figure
+        is held down almost entirely by the JSON API package (<code>web/api/</code>:
+        the <code>*ApiController</code> classes and their DTOs), which is additive, ungraded code
+        for the separate React front end and has no dedicated unit tests — it is exercised only
+        indirectly by the MockMvc integration tests. The pre-existing <code>web/</code> (Thymeleaf
+        controllers), <code>service/</code> and <code>repository/</code> packages remain fully
+        branch-covered. See §3 of the test summary report for what is deliberately left uncovered
+        and why.</td>
+  </tr>
+</table>
+
+<h2>3. Regression demonstration (context for the defect/CI story)</h2>
+<p>A deliberate regression was introduced to prove the pipeline actually catches breakage, not just
+that tests exist. Commit <code>9b6c9fe</code> (now in <code>main</code>'s history, immediately
+followed by its revert <code>4a98ab9</code>) shifted Rule 1's
+CHILD/ADULT boundary from <code>age &le; 17</code> to <code>age &le; 16</code> — a one-line off-by-one
+that would silently overcharge every 17-year-old patient (ADULT fee, 250 ETB, instead of CHILD, 100
+ETB) if it reached production.</p>
+<table class="data">
+  <tr><th></th><th>Commit</th><th>CI run</th><th>Result</th></tr>
+  <tr><td>Before (regression introduced)</td><td><code>9b6c9fe</code></td><td>run 33305001970</td><td><strong>Failure</strong> (22s) — caught by <code>fee_atUpperBoundaryOfChildBand_age17_is100</code>, written in Phase 3, before this regression existed</td></tr>
+  <tr><td>After (regression reverted + DEF-002 fixed)</td><td><code>4a98ab9</code></td><td>run 33305212152</td><td><strong>Success</strong> (52s) — full suite green (58 unit + 9 integration + 2 system <em>at that time</em>), coverage gate passed</td></tr>
+</table>
+<p class="small">Full narrative in <code>docs/regression-demo.md</code>. This is exactly what
+boundary value analysis is for: the test exists at age 17 specifically because that is the
+boundary, and a one-line shift of the boundary was caught immediately by the one test written to
+sit on it. The suite counts in the "After" row are the branch's state on 2026-09-05; the current
+<code>main</code> suite is 228 unit + 72 integration + 5 system (see the test summary report), and
+the same <code>fee_atUpperBoundaryOfChildBand_age17_is100</code> test still guards this boundary.</p>
+
+</body>
+</html>

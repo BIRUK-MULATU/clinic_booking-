@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Clinic Booking - Login</title>
+</head>
+<body>
+<h1 id="page-title">Clinic Booking Login</h1>
+
+<p id="login-error" th:if="${error}" th:text="${error}"></p>
+
+<form id="login-form" method="post" th:action="@{/login}">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" required="required"/>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required="required"/>
+
+    <button type="submit" id="login-submit">Log in</button>
+</form>
+</body>
+</html>

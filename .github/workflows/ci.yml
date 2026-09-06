@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      # ubuntu-latest ships Google Chrome already; Selenium Manager
+      # finds it on its own, so no extra browser install step is needed.
+      - name: Build, test and check coverage gate
+        run: mvn --batch-mode clean verify
+
+      - name: Mutation testing (PIT) on et.aau.clinic.core
+        run: mvn --batch-mode test-compile org.pitest:pitest-maven:mutationCoverage
+
+      - name: Publish mutation summary
+        if: always()
+        run: |
+          if [ ! -f target/pit-reports/mutations.xml ]; then
+            echo "## PIT mutation testing - et.aau.clinic.core" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "No mutation report was generated - PIT did not run." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          total=$(grep -c '<mutation ' target/pit-reports/mutations.xml || echo 0)
+          killed=$(grep -c "status='KILLED'" target/pit-reports/mutations.xml || echo 0)
+          pct=$(awk -v k="$killed" -v t="$total" 'BEGIN { printf (t>0)?100*k/t:0 }')
+          {
+            echo "## PIT mutation testing - et.aau.clinic.core"
+            echo ""
+            printf "| Mutations | Killed | Mutation score |\n"
+            printf "|---|---|---|\n"
+            printf "| %d | %d | %.1f%% |\n" "$total" "$killed" "$pct"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pit-report
+          path: backend/target/pit-reports/
+
+      - name: Publish coverage summary
+        if: always()
+        run: |
+          # jacoco.csv is written by a plugin goal bound to the verify
+          # phase, so it never exists if an earlier phase (e.g. the
+          # tests themselves) already failed the build - skip cleanly
+          # instead of failing this step too.
+          if [ ! -f target/site/jacoco/jacoco.csv ]; then
+            echo "## JaCoCo branch coverage - et.aau.clinic.core" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "No coverage report was generated - the build failed before the verify phase ran." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "## JaCoCo branch coverage - et.aau.clinic.core"
+            echo ""
+            echo "| Class | Branches covered | Branches missed | Coverage |"
+            echo "|---|---|---|---|"
+            awk -F',' '
+              NR == 1 { next }
+              $2 == "et.aau.clinic.core" {
+                covered = $7; missed = $6
+                total_covered += covered; total_missed += missed
+                pct = (covered + missed > 0) ? 100 * covered / (covered + missed) : 0
+                printf "| %s | %d | %d | %.1f%% |\n", $3, covered, missed, pct
+              }
+              END {
+                total = total_covered + total_missed
+                pct = (total > 0) ? 100 * total_covered / total : 0
+                printf "| **TOTAL** | **%d** | **%d** | **%.1f%%** |\n", total_covered, total_missed, pct
+              }
+            ' target/site/jacoco/jacoco.csv
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload JaCoCo report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: backend/target/site/jacoco/
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/
