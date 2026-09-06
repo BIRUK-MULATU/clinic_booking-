@@ -39,8 +39,13 @@
   <h1>Test Summary Report</h1>
   <div class="subtitle">Clinic Booking System</div>
   <table class="meta">
-    <tr><th>Student</th><td>Biruk Mulatu</td></tr>
-    <tr><th>Student ID</th><td>[STUDENT ID — fill in before submission]</td></tr>
+    <tr><th>Group members</th><td>
+      Biruk Mulatu Kibret &mdash; ATE/9686/14<br>
+      Yesehak Abraham Mesfin &mdash; ATE/8291/14<br>
+      Hawa Nursefa Fujaga &mdash; ATE/7005/14<br>
+      Habtamu Zeleke Muluneh &mdash; ATE/7735/14<br>
+      Fenet Teshome Argeta &mdash; ATE/9860/14
+    </td></tr>
     <tr><th>Instructor</th><td>Abel Tadesse</td></tr>
     <tr><th>Date</th><td>4 September 2026 (revised 6 September 2026)</td></tr>
   </table>
@@ -168,7 +173,8 @@ Mutation testing runs on top of the unit level as a separate quality gate.</p>
       <td><strong>Low.</strong> Each endpoint is a thin delegate to the fully-tested
       <code>AppointmentService</code> and is exercised indirectly by MockMvc integration tests; the
       logic that could actually be wrong lives in the service, not the controller.</td></tr>
-  <tr><td>Defect metrics based on a small sample (5 defects, 1 developer, no external review yet)</td>
+  <tr><td>Defect metrics based on a small sample (5 defects, one student group, no external review
+      yet)</td>
       <td>N/A</td><td><strong>Low–Medium.</strong> DRE of 100% and 0 escaped defects reflect that no
       external party has evaluated the system yet, not that it is defect-free; the instructor's
       evaluation is the first real external validation this project will undergo (see §6's
@@ -186,7 +192,7 @@ version of this report had carried as a known limitation. The regression-detecti
 real, reproducible evidence (a failing CI run and a passing one) rather than a description of what
 would happen.</p>
 <p>There is no known open functional gap. The residual risks in §4 are all "low" and are about the
-limits of a single-developer, single-process, not-yet-externally-reviewed project rather than about
+limits of a small, single-process, not-yet-externally-reviewed project rather than about
 suspected defects in the code. For a course project whose explicit grading criterion is the testing
 effort, and equally for the application's own correctness, this is a defensible stopping point.</p>
 </div>

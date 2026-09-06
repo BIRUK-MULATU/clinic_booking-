@@ -31,11 +31,13 @@ made in one is visible in the other.
 
 ## Group members
 
-Solo submission (group size 1).
-
-| Name | Student ID |
-|------|------------|
-| Biruk Mulatu | _fill in before submission_ |
+| Name | Student ID | Role |
+|------|------------|------|
+| Biruk Mulatu Kibret | ATE/9686/14 | Developer / team lead |
+| Yesehak Abraham Mesfin | ATE/8291/14 | Test designer |
+| Hawa Nursefa Fujaga | ATE/7005/14 | Test automation engineer |
+| Habtamu Zeleke Muluneh | ATE/7735/14 | CI / DevOps |
+| Fenet Teshome Argeta | ATE/9860/14 | Defect & quality manager |
 
 ## Stack
 

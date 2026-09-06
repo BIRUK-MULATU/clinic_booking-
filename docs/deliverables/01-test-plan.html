@@ -35,11 +35,15 @@
   <h1>Test Plan</h1>
   <div class="subtitle">Clinic Booking System</div>
   <table class="meta">
-    <tr><th>Student</th><td>Biruk Mulatu</td></tr>
-    <tr><th>Student ID</th><td>[STUDENT ID — fill in before submission]</td></tr>
+    <tr><th>Group members</th><td>
+      Biruk Mulatu Kibret &mdash; ATE/9686/14<br>
+      Yesehak Abraham Mesfin &mdash; ATE/8291/14<br>
+      Hawa Nursefa Fujaga &mdash; ATE/7005/14<br>
+      Habtamu Zeleke Muluneh &mdash; ATE/7735/14<br>
+      Fenet Teshome Argeta &mdash; ATE/9860/14
+    </td></tr>
     <tr><th>Instructor</th><td>Abel Tadesse</td></tr>
     <tr><th>Date</th><td>4 September 2026 (revised 6 September 2026)</td></tr>
-    <tr><th>Group size</th><td>1 (solo submission)</td></tr>
   </table>
 </div>
 
@@ -71,7 +75,7 @@ stays focused on rules 1–3b so the derivation is easy to follow.</p>
       CANCEL transition. → boundary value analysis.</li>
 </ul>
 <p><strong>Extension rules</strong> (tested with the same four techniques; see the test design
-document §6 and the named test classes):</p>
+document §5 and the named test classes):</p>
 <ul>
   <li><strong>Rule F</strong> — patient-account registration (<code>PatientRegistrationPolicy</code>):
       five-condition decision table + BVA on password length and age.</li>
@@ -252,8 +256,8 @@ right, since more branching means more ways to get it wrong.</p>
 </table>
 
 <h2>5. Schedule</h2>
-<p>Real dates for this solo project (compressed relative to the assignment's suggested three-week
-plan since the code phases were completed ahead of the documentation):</p>
+<p>Real dates (compressed relative to the assignment's suggested three-week plan, since the code
+phases were completed ahead of the documentation):</p>
 <table class="data">
   <tr><th>Date</th><th>Milestone</th></tr>
   <tr><td>2026-08-30 (morning)</td><td>Phases 1–6: domain, core rules with unit tests, service
@@ -276,20 +280,25 @@ plan since the code phases were completed ahead of the documentation):</p>
 </table>
 
 <h2>6. Roles</h2>
-<p>This is a solo submission (group size 1). One student carried out every role the assignment
-would otherwise distribute across a group of up to four:</p>
+<p>A group of five. Each member owns one of the roles the assignment distributes across a group;
+the work was reviewed together and everyone can explain any part of the submission.</p>
 <table class="data">
   <tr><th>Role</th><th>Responsibility</th><th>Owner</th></tr>
-  <tr><td>Developer</td><td>Application code: domain, core rules, service layer, web layer</td>
-      <td>Biruk Mulatu</td></tr>
-  <tr><td>Test designer</td><td>Deriving EP/BVA/decision-table/state-transition test cases (Part B)</td>
-      <td>Biruk Mulatu</td></tr>
+  <tr><td>Developer / team lead</td><td>Application code: domain, core rules, service layer, web
+      layer; branch integration and build</td>
+      <td>Biruk Mulatu Kibret</td></tr>
+  <tr><td>Test designer</td><td>Deriving the EP / BVA / decision-table / state-transition and
+      pairwise test cases (Part B)</td>
+      <td>Yesehak Abraham Mesfin</td></tr>
   <tr><td>Test automation engineer</td><td>Writing and maintaining the unit, integration and
-      Selenium suites</td><td>Biruk Mulatu</td></tr>
-  <tr><td>CI/DevOps</td><td>GitHub Actions workflow, Jenkinsfile and Docker setup, regression demo</td>
-      <td>Biruk Mulatu</td></tr>
-  <tr><td>Defect/quality manager</td><td>Defect log, metrics, coverage reporting, this test plan</td>
-      <td>Biruk Mulatu</td></tr>
+      Selenium suites and the Page Objects</td>
+      <td>Hawa Nursefa Fujaga</td></tr>
+  <tr><td>CI / DevOps</td><td>GitHub Actions workflow, Jenkinsfile and Docker setup, the regression
+      demonstration, mutation-testing (PIT) wiring</td>
+      <td>Habtamu Zeleke Muluneh</td></tr>
+  <tr><td>Defect &amp; quality manager</td><td>Defect log, metrics, coverage and mutation-score
+      reporting, and this test plan and the test summary report</td>
+      <td>Fenet Teshome Argeta</td></tr>
 </table>
 
 </body>
