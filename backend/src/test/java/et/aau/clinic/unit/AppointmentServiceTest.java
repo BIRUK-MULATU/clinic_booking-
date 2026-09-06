@@ -403,6 +403,110 @@ class AppointmentServiceTest {
         verify(appointmentRepository, never()).findByPatientAndStatus(any(), any());
     }
 
+    // Rule I: reschedule moves the slot, keeps the state, and reprices from the patient's age today.
+    @Test
+    void reschedule_requestedAppointment_toAFreeSlot_movesSlotAndKeepsRequestedState() {
+        Patient patient = adultPatient();
+        Slot oldSlot = new Slot(FIXED_NOW.plusHours(5));
+        Slot newSlot = new Slot(FIXED_NOW.plusDays(2));
+        Appointment appointment = new Appointment(
+                patient, oldSlot, AppointmentStatus.REQUESTED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        when(appointmentRepository.findById(5L)).thenReturn(Optional.of(appointment));
+        when(slotRepository.findById(9L)).thenReturn(Optional.of(newSlot));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(newSlot), any())).thenReturn(false);
+        when(appointmentRepository.findFirstBySlotAndStatusOrderByRequestedAtAsc(oldSlot, AppointmentStatus.WAITLISTED))
+                .thenReturn(Optional.empty());
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var outcome = service.reschedule(5L, 9L);
+
+        assertThat(outcome.decision().isApproved()).isTrue();
+        assertThat(outcome.appointment().getSlot()).isSameAs(newSlot);
+        assertThat(outcome.appointment().getStatus()).isEqualTo(AppointmentStatus.REQUESTED);
+    }
+
+    @Test
+    void reschedule_childWhoHasSinceTurned18_isRepricedToTheAdultBand() {
+        // DOB exactly 18 years before FIXED_NOW: a CHILD booking is repriced to ADULT on reschedule.
+        Patient patient = new Patient("Grown Up", FIXED_NOW.toLocalDate().minusYears(18),
+                "grown", "secret", "0911999888");
+        Slot newSlot = new Slot(FIXED_NOW.plusDays(2));
+        Appointment appointment = new Appointment(patient, new Slot(FIXED_NOW.plusHours(5)),
+                AppointmentStatus.CONFIRMED, FeeCategory.CHILD, new BigDecimal("100"), FIXED_NOW.minusDays(400));
+        when(appointmentRepository.findById(5L)).thenReturn(Optional.of(appointment));
+        when(slotRepository.findById(9L)).thenReturn(Optional.of(newSlot));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(newSlot), any())).thenReturn(false);
+        when(appointmentRepository.findFirstBySlotAndStatusOrderByRequestedAtAsc(any(), eq(AppointmentStatus.WAITLISTED)))
+                .thenReturn(Optional.empty());
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var outcome = service.reschedule(5L, 9L);
+
+        assertThat(outcome.appointment().getFeeCategory()).isEqualTo(FeeCategory.ADULT);
+        assertThat(outcome.appointment().getFeeAmount()).isEqualByComparingTo("250");
+    }
+
+    @Test
+    void reschedule_toATakenSlot_rejectsAndDoesNotMove() {
+        Patient patient = adultPatient();
+        Slot oldSlot = new Slot(FIXED_NOW.plusHours(5));
+        Slot newSlot = new Slot(FIXED_NOW.plusDays(2));
+        Appointment appointment = new Appointment(
+                patient, oldSlot, AppointmentStatus.REQUESTED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        when(appointmentRepository.findById(5L)).thenReturn(Optional.of(appointment));
+        when(slotRepository.findById(9L)).thenReturn(Optional.of(newSlot));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(newSlot), any())).thenReturn(true);
+
+        var outcome = service.reschedule(5L, 9L);
+
+        assertThat(outcome.decision().isApproved()).isFalse();
+        assertThat(outcome.decision().getReason())
+                .isEqualTo(et.aau.clinic.domain.RescheduleRejection.SLOT_UNAVAILABLE);
+        assertThat(appointment.getSlot()).isSameAs(oldSlot);
+        verify(appointmentRepository, never()).save(any());
+    }
+
+    // Rule J: the waitlist-offer expiry sweep - an expired offer lapses to OFFER_EXPIRED and the
+    // slot is offered to the next person on the waitlist.
+    @Test
+    void expireStaleWaitlistOffers_offerOlderThanTwoHours_lapsesToOfferExpiredAndPromotesNext() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusDays(1));
+        Appointment offer = new Appointment(
+                patient, slot, AppointmentStatus.REQUESTED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        offer.setWaitlistOfferedAt(FIXED_NOW.minusHours(3));
+        Appointment nextInLine = new Appointment(patient, slot,
+                AppointmentStatus.WAITLISTED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        when(appointmentRepository.findByStatusAndWaitlistOfferedAtIsNotNull(AppointmentStatus.REQUESTED))
+                .thenReturn(List.of(offer));
+        when(appointmentRepository.findFirstBySlotAndStatusOrderByRequestedAtAsc(slot, AppointmentStatus.WAITLISTED))
+                .thenReturn(Optional.of(nextInLine));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        int expired = service.expireStaleWaitlistOffers();
+
+        assertThat(expired).isEqualTo(1);
+        assertThat(offer.getStatus()).isEqualTo(AppointmentStatus.OFFER_EXPIRED);
+        assertThat(nextInLine.getStatus()).isEqualTo(AppointmentStatus.REQUESTED);
+        assertThat(nextInLine.getWaitlistOfferedAt()).isEqualTo(FIXED_NOW);
+    }
+
+    @Test
+    void expireStaleWaitlistOffers_offerStillWithinTwoHours_isLeftAlone() {
+        Patient patient = adultPatient();
+        Appointment offer = new Appointment(patient, new Slot(FIXED_NOW.plusDays(1)),
+                AppointmentStatus.REQUESTED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        offer.setWaitlistOfferedAt(FIXED_NOW.minusHours(1));
+        when(appointmentRepository.findByStatusAndWaitlistOfferedAtIsNotNull(AppointmentStatus.REQUESTED))
+                .thenReturn(List.of(offer));
+
+        int expired = service.expireStaleWaitlistOffers();
+
+        assertThat(expired).isZero();
+        assertThat(offer.getStatus()).isEqualTo(AppointmentStatus.REQUESTED);
+        verify(appointmentRepository, never()).save(any());
+    }
+
     private Appointment noShow(Patient patient, LocalDateTime slotStart) {
         return new Appointment(patient, new Slot(slotStart), AppointmentStatus.NO_SHOW,
                 FeeCategory.ADULT, new BigDecimal("250"), slotStart.minusDays(1));

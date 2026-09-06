@@ -24,6 +24,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // "Next" waitlisted patient for a slot, FIFO by requestedAt - used to promote on cancellation.
     Optional<Appointment> findFirstBySlotAndStatusOrderByRequestedAtAsc(Slot slot, AppointmentStatus status);
 
+    // Rule J: outstanding waitlist offers - REQUESTED appointments promoted off the waitlist
+    // (waitlistOfferedAt set) that the patient has not yet confirmed. The 2-hour expiry check
+    // is WaitlistOfferPolicy's job, per row against the Clock.
+    List<Appointment> findByStatusAndWaitlistOfferedAtIsNotNull(AppointmentStatus status);
+
     // The reception day-roster: every appointment whose slot falls within a day, earliest first.
     List<Appointment> findBySlot_StartTimeBetweenOrderBySlot_StartTimeAsc(LocalDateTime from, LocalDateTime to);
 

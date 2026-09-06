@@ -9,8 +9,11 @@ import et.aau.clinic.core.Fee;
 import et.aau.clinic.core.FeeCalculator;
 import et.aau.clinic.core.ReminderDecision;
 import et.aau.clinic.core.ReminderPolicy;
+import et.aau.clinic.core.RescheduleDecision;
+import et.aau.clinic.core.ReschedulePolicy;
 import et.aau.clinic.core.SuspensionDecision;
 import et.aau.clinic.core.SuspensionPolicy;
+import et.aau.clinic.core.WaitlistOfferPolicy;
 import et.aau.clinic.domain.Appointment;
 import et.aau.clinic.domain.AppointmentStatus;
 import et.aau.clinic.domain.Patient;
@@ -281,23 +284,81 @@ public class AppointmentService {
                     now, appointment.getSlot().getStartTime(), appointment.getFeeAmount());
             appointment.setCancellationFee(fee);
 
-            promoteNextWaitlisted(appointment.getSlot());
+            promoteNextWaitlisted(appointment.getSlot(), now);
         }
 
         return appointmentRepository.save(appointment);
     }
 
     /**
-     * Hospital-expansion Phase C, now wired: when a CONFIRMED appointment is cancelled,
-     * the slot it held frees up, so the longest-waiting WAITLISTED appointment for that
-     * same slot (if any) is promoted to REQUESTED via the transition that already exists
-     * for exactly this purpose.
+     * Hospital-expansion Rule I: move an appointment to a different slot. ReschedulePolicy
+     * gates it (state reschedulable, new slot free, 2h notice on the new time); on success
+     * the appointment keeps its state (RESCHEDULE is a self-loop), takes the new slot, and
+     * is repriced from the patient's age today - so a child who has since turned 18 moves
+     * to the adult fee. The old slot it vacated is offered to that slot's waitlist.
      */
-    private void promoteNextWaitlisted(Slot slot) {
+    public RescheduleOutcome reschedule(Long appointmentId, Long newSlotId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId).orElseThrow();
+        Slot newSlot = slotRepository.findById(newSlotId).orElseThrow();
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        boolean newSlotFree = !appointmentRepository.existsBySlotAndStatusIn(newSlot, ACTIVE_STATUSES);
+        RescheduleDecision decision = ReschedulePolicy.evaluate(
+                appointment.getStatus(), newSlotFree, now, newSlot.getStartTime());
+        if (!decision.isApproved()) {
+            return new RescheduleOutcome(decision, null);
+        }
+
+        Slot oldSlot = appointment.getSlot();
+        appointment.setStatus(
+                AppointmentStateMachine.transition(appointment.getStatus(), AppointmentEvent.RESCHEDULE));
+        appointment.setSlot(newSlot);
+
+        Patient patient = appointment.getPatient();
+        int age = Period.between(patient.getDateOfBirth(), now.toLocalDate()).getYears();
+        Fee fee = FeeCalculator.calculate(age);
+        appointment.reprice(fee.category(), fee.amount(),
+                CoverageCalculator.netPayable(fee.amount(), patient.getCoveragePercent()));
+
+        Appointment saved = appointmentRepository.save(appointment);
+        promoteNextWaitlisted(oldSlot, now);
+        return new RescheduleOutcome(decision, saved);
+    }
+
+    /**
+     * Hospital-expansion Rule J: the scheduled sweep. A waitlist offer (a REQUESTED
+     * appointment promoted off the waitlist, stamped with waitlistOfferedAt) that the
+     * patient has not confirmed within 2 hours lapses to OFFER_EXPIRED, and the slot is
+     * offered to the next person on that slot's waitlist. Returns how many lapsed.
+     */
+    public int expireStaleWaitlistOffers() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        int expired = 0;
+        for (Appointment appointment :
+                appointmentRepository.findByStatusAndWaitlistOfferedAtIsNotNull(AppointmentStatus.REQUESTED)) {
+            if (WaitlistOfferPolicy.isExpired(appointment.getWaitlistOfferedAt(), now)) {
+                appointment.setStatus(AppointmentStateMachine.transition(
+                        AppointmentStatus.REQUESTED, AppointmentEvent.EXPIRE_OFFER));
+                appointmentRepository.save(appointment);
+                promoteNextWaitlisted(appointment.getSlot(), now);
+                expired++;
+            }
+        }
+        return expired;
+    }
+
+    /**
+     * Hospital-expansion Phase C, now wired: when a CONFIRMED appointment is cancelled or
+     * rescheduled away, the slot it held frees up, so the longest-waiting WAITLISTED
+     * appointment for that same slot (if any) is promoted to REQUESTED. The promotion time
+     * is stamped on it (Rule J) so an unconfirmed offer can later be expired.
+     */
+    private void promoteNextWaitlisted(Slot slot, LocalDateTime now) {
         appointmentRepository.findFirstBySlotAndStatusOrderByRequestedAtAsc(slot, AppointmentStatus.WAITLISTED)
                 .ifPresent(waitlisted -> {
                     waitlisted.setStatus(
                             AppointmentStateMachine.transition(AppointmentStatus.WAITLISTED, AppointmentEvent.PROMOTE));
+                    waitlisted.setWaitlistOfferedAt(now);
                     appointmentRepository.save(waitlisted);
                 });
     }

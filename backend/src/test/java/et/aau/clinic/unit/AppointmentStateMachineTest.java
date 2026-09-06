@@ -16,22 +16,28 @@ import java.util.stream.Stream;
 import static et.aau.clinic.core.AppointmentEvent.ATTEND;
 import static et.aau.clinic.core.AppointmentEvent.CANCEL;
 import static et.aau.clinic.core.AppointmentEvent.CONFIRM;
+import static et.aau.clinic.core.AppointmentEvent.EXPIRE_OFFER;
 import static et.aau.clinic.core.AppointmentEvent.MARK_NO_SHOW;
 import static et.aau.clinic.core.AppointmentEvent.PROMOTE;
+import static et.aau.clinic.core.AppointmentEvent.RESCHEDULE;
 import static et.aau.clinic.domain.AppointmentStatus.ATTENDED;
 import static et.aau.clinic.domain.AppointmentStatus.CANCELLED;
 import static et.aau.clinic.domain.AppointmentStatus.CONFIRMED;
 import static et.aau.clinic.domain.AppointmentStatus.NO_SHOW;
+import static et.aau.clinic.domain.AppointmentStatus.OFFER_EXPIRED;
 import static et.aau.clinic.domain.AppointmentStatus.REQUESTED;
 import static et.aau.clinic.domain.AppointmentStatus.WAITLISTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Rule 3 - state transition testing over the 6 states x 5 events grid
- * (30 pairs: 7 valid, 23 invalid) after hospital-expansion Phase C added
- * WAITLISTED and PROMOTE, plus Rule 3b's late-cancellation fee, a guard
- * condition tested with its own BVA on the 24-hour mark.
+ * Rule 3 - state transition testing over the 7 states x 7 events grid
+ * (49 pairs: 10 valid, 39 invalid). The grid has grown by extension
+ * three times: Phase C added WAITLISTED + PROMOTE, Rule I added
+ * RESCHEDULE (a state-keeping self-loop from REQUESTED and CONFIRMED),
+ * and Rule J added the terminal OFFER_EXPIRED state + EXPIRE_OFFER
+ * (REQUESTED to OFFER_EXPIRED). Also covers Rule 3b's late-cancellation
+ * fee, a guard condition tested with its own BVA on the 24-hour mark.
  */
 class AppointmentStateMachineTest {
 
@@ -81,8 +87,28 @@ class AppointmentStateMachineTest {
         assertThat(AppointmentStateMachine.transition(WAITLISTED, CANCEL)).isEqualTo(CANCELLED);
     }
 
-    // State transition table: covers all 23 invalid (state, event) pairs - the full 6x5 grid
-    // (30 pairs) minus the 7 valid transitions TC-S01-TC-S05, TC-S09, TC-S10 cover above.
+    // TC-S11 - Rule I, state transition table: REQUESTED --reschedule--> REQUESTED (valid) -
+    // a slot move keeps the appointment in its current state.
+    @Test
+    void transition_requestedReschedule_staysRequested() {
+        assertThat(AppointmentStateMachine.transition(REQUESTED, RESCHEDULE)).isEqualTo(REQUESTED);
+    }
+
+    // TC-S12 - Rule I, state transition table: CONFIRMED --reschedule--> CONFIRMED (valid).
+    @Test
+    void transition_confirmedReschedule_staysConfirmed() {
+        assertThat(AppointmentStateMachine.transition(CONFIRMED, RESCHEDULE)).isEqualTo(CONFIRMED);
+    }
+
+    // TC-S13 - Rule J, state transition table: REQUESTED --expireOffer--> OFFER_EXPIRED (valid) -
+    // a promoted waitlist offer the patient did not confirm within 2 hours.
+    @Test
+    void transition_requestedExpireOffer_movesToOfferExpired() {
+        assertThat(AppointmentStateMachine.transition(REQUESTED, EXPIRE_OFFER)).isEqualTo(OFFER_EXPIRED);
+    }
+
+    // State transition table: covers all 39 invalid (state, event) pairs - the full 7x7 grid
+    // (49 pairs) minus the 10 valid transitions TC-S01-TC-S05, TC-S09-TC-S13 cover above.
     @ParameterizedTest(name = "{index}: {0} + {1} is invalid")
     @MethodSource("invalidStateEventPairs")
     void transition_invalidPair_throwsIllegalStateException(AppointmentStatus state, AppointmentEvent event) {
@@ -91,12 +117,12 @@ class AppointmentStateMachineTest {
     }
 
     /**
-     * State transition table: data source for the 23 invalid pairs above.
-     * All 30 state/event pairs (6 states x 5 events, after hospital-
-     * expansion Phase C added WAITLISTED and PROMOTE) minus the 7 valid
-     * ones - 5 from CLAUDE.md's original table plus the 2 Phase C added -
-     * generated rather than hand-listed so the count (23) is enforced by
-     * the grid itself, not by hand-copying.
+     * State transition table: data source for the 39 invalid pairs above.
+     * All 49 state/event pairs (7 states x 7 events) minus the 10 valid
+     * ones - 5 from CLAUDE.md's original table, 2 from Phase C, 2 from
+     * Rule I (RESCHEDULE) and 1 from Rule J (EXPIRE_OFFER) - generated
+     * rather than hand-listed so the count (39) is enforced by the grid
+     * itself, not by hand-copying.
      */
     static Stream<Arguments> invalidStateEventPairs() {
         record Valid(AppointmentStatus state, AppointmentEvent event) {
@@ -104,9 +130,12 @@ class AppointmentStateMachineTest {
         var validPairs = Stream.of(
                 new Valid(REQUESTED, CONFIRM),
                 new Valid(REQUESTED, CANCEL),
+                new Valid(REQUESTED, RESCHEDULE),
+                new Valid(REQUESTED, EXPIRE_OFFER),
                 new Valid(CONFIRMED, ATTEND),
                 new Valid(CONFIRMED, CANCEL),
                 new Valid(CONFIRMED, MARK_NO_SHOW),
+                new Valid(CONFIRMED, RESCHEDULE),
                 new Valid(WAITLISTED, PROMOTE),
                 new Valid(WAITLISTED, CANCEL)
         ).toList();
@@ -119,26 +148,23 @@ class AppointmentStateMachineTest {
     }
 
     // Meta-check on the state transition table itself, not a technique-derived case: asserts
-    // the generated invalid set has exactly 23 members, so a future edit to the grid can't
+    // the generated invalid set has exactly 39 members, so a future edit to the grid can't
     // silently drop or duplicate a pair.
     //
-    // Hand-derivation, 15 -> 23 (hospital-expansion Phase C added WAITLISTED and PROMOTE):
-    // the grid doesn't grow by addition, it grows by area. One new state adds a full new
-    // ROW (5 cells: WAITLISTED x each of the 5 events); one new event adds a full new
-    // COLUMN (6 cells: PROMOTE x each of the 6 states); they overlap at exactly one cell
-    // (WAITLISTED x PROMOTE). New cells = 5 + 6 - 1 = 10, decomposed as:
-    //   - old 5 states x new PROMOTE column (5 cells): all invalid - PROMOTE only ever
-    //     makes sense from WAITLISTED.
-    //   - new WAITLISTED row x old 4 events (4 cells): CANCEL valid, CONFIRM/ATTEND/
-    //     MARK_NO_SHOW invalid (3 invalid, 1 valid).
-    //   - the 1 overlap cell, WAITLISTED x PROMOTE: valid.
-    // Of the 10 new cells: 2 valid (WAITLISTED+PROMOTE, WAITLISTED+CANCEL), 8 invalid
-    // (5 + 3 above). The original 15 invalid pairs are untouched (the original 5x4 block
-    // is unchanged), so invalid = 15 + 8 = 23. Sanity check: valid = 5 + 2 = 7,
-    // 7 + 23 = 30 = 6 x 5. Both totals agree.
+    // Hand-derivation of valid vs invalid on the full 7 x 7 = 49 grid, by state row:
+    //   REQUESTED    : CONFIRM, CANCEL, RESCHEDULE, EXPIRE_OFFER valid (4); ATTEND,
+    //                  MARK_NO_SHOW, PROMOTE invalid (3).
+    //   CONFIRMED    : ATTEND, CANCEL, MARK_NO_SHOW, RESCHEDULE valid (4); CONFIRM,
+    //                  PROMOTE, EXPIRE_OFFER invalid (3).
+    //   WAITLISTED   : PROMOTE, CANCEL valid (2); other 5 invalid.
+    //   ATTENDED     : terminal - all 7 invalid.
+    //   CANCELLED    : terminal - all 7 invalid.
+    //   NO_SHOW      : terminal - all 7 invalid.
+    //   OFFER_EXPIRED: terminal - all 7 invalid.
+    // Valid = 4 + 4 + 2 = 10. Invalid = 3 + 3 + 5 + 7 + 7 + 7 + 7 = 39. 10 + 39 = 49. OK.
     @Test
-    void invalidStateEventPairs_containsExactlyTwentyThreePairs() {
-        assertThat(invalidStateEventPairs().count()).isEqualTo(23);
+    void invalidStateEventPairs_containsExactlyThirtyNinePairs() {
+        assertThat(invalidStateEventPairs().count()).isEqualTo(39);
     }
 
     // TC-S06 - BVA on Rule 3b's 24h guard: just inside the late window (23h59m).

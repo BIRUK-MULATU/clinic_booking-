@@ -439,7 +439,8 @@ button {
 }
 
 .status-CANCELLED,
-.status-NO_SHOW {
+.status-NO_SHOW,
+.status-OFFER_EXPIRED {
   background: var(--danger-light);
   color: var(--danger);
 }

@@ -196,6 +196,49 @@ class AppointmentServiceIT {
     }
 
     @Test
+    void reschedule_movesTheAppointmentToTheNewSlotAndFreesTheOldOne() {
+        Slot oldSlot = slotRepository.save(new Slot(FIXED_NOW.plusHours(5)));
+        Slot newSlot = slotRepository.save(new Slot(FIXED_NOW.plusDays(2)));
+        BookingOutcome outcome = appointmentService.requestBooking(patient.getId(), oldSlot.getId());
+        Long appointmentId = outcome.appointment().getId();
+        appointmentService.confirm(appointmentId);
+
+        var rescheduled = appointmentService.reschedule(appointmentId, newSlot.getId());
+
+        assertThat(rescheduled.decision().isApproved()).isTrue();
+        Appointment persisted = appointmentRepository.findById(appointmentId).orElseThrow();
+        assertThat(persisted.getStatus()).isEqualTo(AppointmentStatus.CONFIRMED);
+        assertThat(persisted.getSlot().getId()).isEqualTo(newSlot.getId());
+        assertThat(appointmentService.listAvailableSlots()).extracting(Slot::getId).contains(oldSlot.getId());
+    }
+
+    @Test
+    void expireStaleWaitlistOffers_lapsesAnUnconfirmedPromotionToOfferExpired() {
+        Slot slot = slotRepository.save(new Slot(FIXED_NOW.plusDays(2)));
+        Patient second = patientRepository.save(
+                new Patient("Second In Line", LocalDate.of(1991, 2, 2), "second", "secret", "0911111133"));
+
+        Long confirmedId = appointmentService.requestBooking(patient.getId(), slot.getId()).appointment().getId();
+        appointmentService.confirm(confirmedId);
+        Long secondId = appointmentService.joinWaitlist(second.getId(), slot.getId()).getId();
+
+        // Holder cancels -> the waitlisted patient is promoted to REQUESTED with an offer timestamp.
+        appointmentService.cancel(confirmedId);
+        Appointment promoted = appointmentRepository.findById(secondId).orElseThrow();
+        assertThat(promoted.getStatus()).isEqualTo(AppointmentStatus.REQUESTED);
+        assertThat(promoted.getWaitlistOfferedAt()).isEqualTo(FIXED_NOW);
+        // Simulate the 2-hour acceptance window elapsing by backdating the offer.
+        promoted.setWaitlistOfferedAt(FIXED_NOW.minusHours(3));
+        appointmentRepository.save(promoted);
+
+        int expired = appointmentService.expireStaleWaitlistOffers();
+
+        assertThat(expired).isEqualTo(1);
+        assertThat(appointmentRepository.findById(secondId).orElseThrow().getStatus())
+                .isEqualTo(AppointmentStatus.OFFER_EXPIRED);
+    }
+
+    @Test
     void listAvailableSlots_excludesSlotJustBookedThroughTheRealRepository() {
         Slot slot = slotRepository.save(new Slot(FIXED_NOW.plusHours(5)));
         appointmentService.requestBooking(patient.getId(), slot.getId());

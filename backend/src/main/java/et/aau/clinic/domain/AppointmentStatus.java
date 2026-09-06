@@ -1,11 +1,13 @@
 package et.aau.clinic.domain;
 
 /**
- * The six states of Rule 3's lifecycle (five original plus WAITLISTED,
- * added for hospital-expansion Phase C). ATTENDED, CANCELLED and NO_SHOW
- * are terminal - AppointmentStateMachine rejects every event on them.
- * WAITLISTED is entered by construction, not by transition, exactly like
- * REQUESTED - see AppointmentStateMachine's class comment.
+ * The seven states of Rule 3's lifecycle: five original, plus WAITLISTED
+ * (hospital-expansion Phase C) and OFFER_EXPIRED (hospital-expansion
+ * Rule J - a waitlist promotion the patient did not accept in time).
+ * ATTENDED, CANCELLED, NO_SHOW and OFFER_EXPIRED are terminal -
+ * AppointmentStateMachine rejects every event on them. REQUESTED and
+ * WAITLISTED are entered by construction, not by transition - see
+ * AppointmentStateMachine's class comment.
  */
 public enum AppointmentStatus {
     REQUESTED,
@@ -13,5 +15,6 @@ public enum AppointmentStatus {
     ATTENDED,
     CANCELLED,
     NO_SHOW,
-    WAITLISTED
+    WAITLISTED,
+    OFFER_EXPIRED
 }

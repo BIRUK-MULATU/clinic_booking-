@@ -65,6 +65,15 @@ public class Appointment {
      */
     private BigDecimal netPayable;
 
+    /**
+     * When this appointment was promoted off the waitlist (hospital-
+     * expansion Rule J). Stays null unless it came through PROMOTE;
+     * WaitlistOfferPolicy measures the 2-hour acceptance window from
+     * here, and expireStaleWaitlistOffers() lapses the offer once it
+     * passes.
+     */
+    private LocalDateTime waitlistOfferedAt;
+
     protected Appointment() {
         // required by JPA
     }
@@ -91,6 +100,11 @@ public class Appointment {
         return slot;
     }
 
+    /** Rule I: a reschedule moves the appointment to a different slot, keeping its state. */
+    public void setSlot(Slot slot) {
+        this.slot = slot;
+    }
+
     public AppointmentStatus getStatus() {
         return status;
     }
@@ -105,6 +119,17 @@ public class Appointment {
 
     public BigDecimal getFeeAmount() {
         return feeAmount;
+    }
+
+    /**
+     * Rule I: a reschedule recomputes the fee from the patient's age on the
+     * reschedule date, so a child who has since turned 18 is repriced to the
+     * adult band (and net payable with them).
+     */
+    public void reprice(FeeCategory feeCategory, BigDecimal feeAmount, BigDecimal netPayable) {
+        this.feeCategory = feeCategory;
+        this.feeAmount = feeAmount;
+        this.netPayable = netPayable;
     }
 
     public LocalDateTime getRequestedAt() {
@@ -133,5 +158,13 @@ public class Appointment {
 
     public void setNetPayable(BigDecimal netPayable) {
         this.netPayable = netPayable;
+    }
+
+    public LocalDateTime getWaitlistOfferedAt() {
+        return waitlistOfferedAt;
+    }
+
+    public void setWaitlistOfferedAt(LocalDateTime waitlistOfferedAt) {
+        this.waitlistOfferedAt = waitlistOfferedAt;
     }
 }

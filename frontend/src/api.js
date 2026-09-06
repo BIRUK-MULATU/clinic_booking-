@@ -28,6 +28,8 @@ export const api = {
   appointment: (id) => request(`/appointments/${id}`),
   confirm: (id) => request(`/appointments/${id}/confirm`, { method: "POST" }),
   cancel: (id) => request(`/appointments/${id}/cancel`, { method: "POST" }),
+  reschedule: (id, slotId) =>
+    request(`/appointments/${id}/reschedule`, { method: "POST", body: JSON.stringify({ slotId }) }),
   joinWaitlist: (slotId) => request("/waitlist", { method: "POST", body: JSON.stringify({ slotId }) }),
   checkIn: (appointmentId) => request(`/appointments/${appointmentId}/check-in`, { method: "POST" }),
 
@@ -106,6 +108,8 @@ export const REJECTION_MESSAGES = {
   INSUFFICIENT_NOTICE: "Bookings need at least 2 hours' notice before the slot time.",
   SUSPENDED_NO_SHOWS:
     "Your account is suspended from online booking after 3 missed appointments in the last 90 days. Please book at reception.",
+  // Rule I: reschedule rejections reuse this map.
+  NOT_RESCHEDULABLE: "This appointment can no longer be moved.",
 };
 
 // Hospital-expansion Rule F: why ReminderPolicy did not send a reminder.

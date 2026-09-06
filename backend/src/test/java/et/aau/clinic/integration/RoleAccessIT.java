@@ -138,6 +138,35 @@ class RoleAccessIT {
     }
 
     @Test
+    void reschedule_asThePatient_movesTheAppointment_orReportsThePolicyReason() throws Exception {
+        Patient patient = patientRepository.save(
+                new Patient("Tigist Alemu", LocalDate.of(1990, 1, 1), "role-resched-owner", "secret", "0911111111"));
+        Slot oldSlot = slotRepository.save(new Slot(FIXED_NOW.plusHours(5)));
+        Slot newSlot = slotRepository.save(new Slot(FIXED_NOW.plusDays(2)));
+        Slot soonSlot = slotRepository.save(new Slot(FIXED_NOW.plusMinutes(30)));
+        long appointmentId = appointmentService.requestBooking(patient.getId(), oldSlot.getId()).appointment().getId();
+
+        MockHttpSession session = login("role-resched", Role.PATIENT);
+
+        // Too little notice on the target slot -> rejected with the ReschedulePolicy reason.
+        mockMvc.perform(post("/api/appointments/" + appointmentId + "/reschedule").session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"slotId\":" + soonSlot.getId() + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.approved").value(false))
+                .andExpect(jsonPath("$.reason").value("INSUFFICIENT_NOTICE"));
+
+        // A free slot with plenty of notice -> moved.
+        mockMvc.perform(post("/api/appointments/" + appointmentId + "/reschedule").session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"slotId\":" + newSlot.getId() + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.approved").value(true))
+                .andExpect(jsonPath("$.appointment.slotId").value(newSlot.getId().intValue()))
+                .andExpect(jsonPath("$.appointment.status").value("REQUESTED"));
+    }
+
+    @Test
     void adminAppointments_returnsTheDayRosterInSlotOrder() throws Exception {
         Patient patient = patientRepository.save(
                 new Patient("Tigist Alemu", LocalDate.of(1990, 1, 1), "role-roster", "secret", "0911111111"));
