@@ -90,6 +90,14 @@ class PatientRegistrationPolicyTest {
         assertThat(evaluate("Tigist", "tigist", "abcd", VALID_DOB, false).isApproved()).isTrue();
     }
 
+    // TC-R10b - C4: a null password is treated as too short, not a NullPointerException
+    // (covers the password == null branch of C4, the mirror of TC-R15 for the date of birth).
+    @Test
+    void password_null_isRejectedAsTooShort() {
+        assertRejected(evaluate("Tigist", "tigist", null, VALID_DOB, false),
+                RegistrationRejection.PASSWORD_TOO_SHORT);
+    }
+
     // TC-R11 - Rule R5 (C5=F): a date of birth in the future.
     @Test
     void registration_futureDateOfBirth_rejectsWithInvalidDateOfBirth() {
