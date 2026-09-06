@@ -13,13 +13,9 @@ import VisitRecordPage from "./pages/VisitRecordPage";
 import PatientsPage from "./pages/PatientsPage";
 import ManageSlotsPage from "./pages/ManageSlotsPage";
 import RemindersPage from "./pages/RemindersPage";
+import WelcomePage from "./pages/WelcomePage";
 import Watermark from "./components/Watermark";
 import { useAuth } from "./context/AuthContext";
-
-function HomeRedirect() {
-  const { patient } = useAuth();
-  return <Navigate to={patient?.role === "ADMIN" ? "/queue" : "/slots"} replace />;
-}
 
 export default function App() {
   const { patient } = useAuth();
@@ -29,7 +25,14 @@ export default function App() {
       {patient?.role === "PATIENT" && <Watermark />}
       <TopBar />
       <Routes>
-        <Route path="/" element={<HomeRedirect />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <WelcomePage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/slots"
@@ -119,7 +122,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<HomeRedirect />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );

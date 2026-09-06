@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function TopBar() {
@@ -14,15 +14,22 @@ export default function TopBar() {
 
   return (
     <header className="topbar">
-      <div className="brand">
+      <Link
+        to={patient ? "/" : "/login"}
+        className="brand"
+        style={{ textDecoration: "none", color: "inherit" }}
+      >
         <span className="brand-mark">+</span>
         Clinic Booking
-      </div>
+      </Link>
 
       {patient && (
         <nav className="nav-links">
           {patient.role === "ADMIN" ? (
             <>
+              <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
+                Home
+              </NavLink>
               <NavLink to="/queue" className={({ isActive }) => (isActive ? "active" : "")}>
                 Reception
               </NavLink>
@@ -41,6 +48,9 @@ export default function TopBar() {
             </>
           ) : (
             <>
+              <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
+                Home
+              </NavLink>
               <NavLink to="/slots" className={({ isActive }) => (isActive ? "active" : "")}>
                 Book a slot
               </NavLink>
