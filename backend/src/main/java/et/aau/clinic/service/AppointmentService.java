@@ -9,6 +9,8 @@ import et.aau.clinic.core.Fee;
 import et.aau.clinic.core.FeeCalculator;
 import et.aau.clinic.core.ReminderDecision;
 import et.aau.clinic.core.ReminderPolicy;
+import et.aau.clinic.core.SuspensionDecision;
+import et.aau.clinic.core.SuspensionPolicy;
 import et.aau.clinic.domain.Appointment;
 import et.aau.clinic.domain.AppointmentStatus;
 import et.aau.clinic.domain.Patient;
@@ -100,10 +102,17 @@ public class AppointmentService {
     public BookingOutcome requestBooking(Long patientId, Long slotId) {
         Patient patient = patientRepository.findById(patientId).orElseThrow();
         Slot slot = slotRepository.findById(slotId).orElseThrow();
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        // Rule H (highest-priority gate): a patient with 3+ recent no-shows cannot self-book,
+        // regardless of the slot, their balance or the notice given. Reception's bookForPatient()
+        // deliberately skips this, exactly as it skips C2/C3.
+        if (suspensionFor(patient, now).isSuspended()) {
+            return new BookingOutcome(BookingDecision.reject(RejectionReason.SUSPENDED_NO_SHOWS), null);
+        }
 
         boolean slotFree = !appointmentRepository.existsBySlotAndStatusIn(slot, ACTIVE_STATUSES);
         boolean noOutstandingBalance = patient.getOutstandingBalance().signum() <= 0;
-        LocalDateTime now = LocalDateTime.now(clock);
 
         BookingDecision decision = BookingPolicy.evaluate(slotFree, noOutstandingBalance, now, slot.getStartTime());
         if (!decision.isApproved()) {
@@ -154,6 +163,23 @@ public class AppointmentService {
 
         Appointment appointment = newAppointment(patient, slot, AppointmentStatus.WAITLISTED, now);
         return appointmentRepository.save(appointment);
+    }
+
+    /**
+     * Rule H: the patient's current no-show suspension status. Exposed so the UI can warn
+     * a patient ("2 of 3 no-shows") before they even pick a slot.
+     */
+    public SuspensionDecision suspensionFor(Long patientId) {
+        Patient patient = patientRepository.findById(patientId).orElseThrow();
+        return suspensionFor(patient, LocalDateTime.now(clock));
+    }
+
+    private SuspensionDecision suspensionFor(Patient patient, LocalDateTime now) {
+        List<LocalDateTime> noShowTimes = appointmentRepository
+                .findByPatientAndStatus(patient, AppointmentStatus.NO_SHOW).stream()
+                .map(appointment -> appointment.getSlot().getStartTime())
+                .toList();
+        return SuspensionPolicy.evaluate(noShowTimes, now);
     }
 
     /**

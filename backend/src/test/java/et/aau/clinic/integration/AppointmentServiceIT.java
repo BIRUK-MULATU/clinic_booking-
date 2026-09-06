@@ -137,6 +137,25 @@ class AppointmentServiceIT {
     }
 
     @Test
+    void requestBooking_afterThreeNoShows_isRejectedForSelfBooking_butReceptionCanStillBook() {
+        // Rack up 3 no-shows through the real flow: book -> confirm -> markNoShow, on 3 slots.
+        for (int i = 1; i <= 3; i++) {
+            Slot missed = slotRepository.save(new Slot(FIXED_NOW.plusHours(2 + i)));
+            BookingOutcome b = appointmentService.requestBooking(patient.getId(), missed.getId());
+            appointmentService.confirm(b.appointment().getId());
+            appointmentService.markNoShow(b.appointment().getId());
+        }
+
+        Slot fresh = slotRepository.save(new Slot(FIXED_NOW.plusDays(10)));
+        BookingOutcome selfBooking = appointmentService.requestBooking(patient.getId(), fresh.getId());
+        assertThat(selfBooking.decision().isApproved()).isFalse();
+        assertThat(selfBooking.decision().getReason()).isEqualTo(RejectionReason.SUSPENDED_NO_SHOWS);
+
+        BookingOutcome receptionBooking = appointmentService.bookForPatient(patient.getId(), fresh.getId());
+        assertThat(receptionBooking.decision().isApproved()).isTrue();
+    }
+
+    @Test
     void requestBooking_insuredPatient_persistsNetPayableAlongsideTheFullFee() {
         patient.setCoveragePercent(60);
         patientRepository.save(patient);

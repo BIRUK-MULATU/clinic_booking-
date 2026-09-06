@@ -104,6 +104,8 @@ export const REJECTION_MESSAGES = {
   SLOT_UNAVAILABLE: "That slot has just been taken. Please pick another one.",
   OUTSTANDING_BALANCE: "You have an outstanding balance and cannot book until it is settled.",
   INSUFFICIENT_NOTICE: "Bookings need at least 2 hours' notice before the slot time.",
+  SUSPENDED_NO_SHOWS:
+    "Your account is suspended from online booking after 3 missed appointments in the last 90 days. Please book at reception.",
 };
 
 // Hospital-expansion Rule F: why ReminderPolicy did not send a reminder.

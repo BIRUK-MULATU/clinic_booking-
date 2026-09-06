@@ -348,6 +348,66 @@ class AppointmentServiceTest {
         verify(notificationService, never()).sendReminder(eq(later), any());
     }
 
+    // Rule H: a patient with 3+ recent no-shows is barred from self-booking, but reception can
+    // still book them in.
+    @Test
+    void requestBooking_patientSuspendedForThreeNoShows_rejectsWithSuspendedReasonAndSavesNothing() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusHours(3));
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(appointmentRepository.findByPatientAndStatus(patient, AppointmentStatus.NO_SHOW))
+                .thenReturn(List.of(
+                        noShow(patient, FIXED_NOW.minusDays(5)),
+                        noShow(patient, FIXED_NOW.minusDays(20)),
+                        noShow(patient, FIXED_NOW.minusDays(50))));
+
+        BookingOutcome outcome = service.requestBooking(1L, 2L);
+
+        assertThat(outcome.decision().isApproved()).isFalse();
+        assertThat(outcome.decision().getReason()).isEqualTo(RejectionReason.SUSPENDED_NO_SHOWS);
+        assertThat(outcome.appointment()).isNull();
+        verify(appointmentRepository, never()).save(any());
+    }
+
+    @Test
+    void requestBooking_patientWithOnlyTwoRecentNoShows_isNotSuspended() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusHours(3));
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(appointmentRepository.findByPatientAndStatus(patient, AppointmentStatus.NO_SHOW))
+                .thenReturn(List.of(
+                        noShow(patient, FIXED_NOW.minusDays(5)),
+                        noShow(patient, FIXED_NOW.minusDays(20))));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingOutcome outcome = service.requestBooking(1L, 2L);
+
+        assertThat(outcome.decision().isApproved()).isTrue();
+    }
+
+    @Test
+    void bookForPatient_receptionPath_neverConsultsNoShowHistory() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusHours(3));
+        when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        when(slotRepository.findById(2L)).thenReturn(Optional.of(slot));
+        when(appointmentRepository.existsBySlotAndStatusIn(eq(slot), any())).thenReturn(false);
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingOutcome outcome = service.bookForPatient(1L, 2L);
+
+        assertThat(outcome.decision().isApproved()).isTrue();
+        verify(appointmentRepository, never()).findByPatientAndStatus(any(), any());
+    }
+
+    private Appointment noShow(Patient patient, LocalDateTime slotStart) {
+        return new Appointment(patient, new Slot(slotStart), AppointmentStatus.NO_SHOW,
+                FeeCategory.ADULT, new BigDecimal("250"), slotStart.minusDays(1));
+    }
+
     // Rule G: the net payable after insurance is captured on the appointment at booking time.
     @Test
     void requestBooking_patientWith40PercentCoverage_capturesNetPayableOnTheAppointment() {

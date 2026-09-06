@@ -18,6 +18,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByPatientOrderByRequestedAtDesc(Patient patient);
 
+    // Rule H: a patient's past no-shows, used to count the recent ones for the suspension check.
+    List<Appointment> findByPatientAndStatus(Patient patient, AppointmentStatus status);
+
     // "Next" waitlisted patient for a slot, FIFO by requestedAt - used to promote on cancellation.
     Optional<Appointment> findFirstBySlotAndStatusOrderByRequestedAtAsc(Slot slot, AppointmentStatus status);
 
