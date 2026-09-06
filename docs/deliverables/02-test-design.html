@@ -39,14 +39,18 @@
     <tr><th>Student</th><td>Biruk Mulatu</td></tr>
     <tr><th>Student ID</th><td>[STUDENT ID — fill in before submission]</td></tr>
     <tr><th>Instructor</th><td>Abel Tadesse</td></tr>
-    <tr><th>Date</th><td>4 September 2026</td></tr>
+    <tr><th>Date</th><td>4 September 2026 (revised 6 September 2026)</td></tr>
   </table>
 </div>
 
-<p>This document derives test cases for the three domain rules using the four formal techniques the
-assignment requires: equivalence partitioning, boundary value analysis, a decision table, and state
-transition testing. Every case listed below is implemented, by the same name, in
-<code>backend/src/test/java/et/aau/clinic/unit/</code> — the map from design to code is exact, not
+<p>Sections 1–4 derive test cases for the four course rules (1, 2, 3, 3b) using the four formal
+techniques the assignment requires: equivalence partitioning, boundary value analysis, a decision
+table, and state transition testing. These four rules are the primary vehicle for the techniques —
+each is shaped to feed exactly one — so the working is shown in full here. Section 5 applies the
+same four techniques to the seven extension rules (F–L) more briefly, pointing to the derived cases
+in code. Section 6 adds a fifth technique, pairwise (all-pairs) testing, applied to the booking
+outcome. Every case listed is implemented, by the same name, under
+<code>backend/src/test/java/et/aau/clinic/</code> — the map from design to code is exact, not
 illustrative.</p>
 
 <h2>1. Equivalence partitioning and boundary value analysis — Rule 1 (consultation fee by age)</h2>
@@ -134,21 +138,34 @@ threshold.</p>
 </table>
 
 <h2>3. State transition testing — Rule 3 (appointment lifecycle)</h2>
-<p>Implemented in <code>core.AppointmentStateMachine</code>. States:
-<code>REQUESTED, CONFIRMED, ATTENDED, CANCELLED, NO_SHOW</code>. Events:
-<code>CONFIRM, CANCEL, ATTEND, MARK_NO_SHOW</code>. 5 states × 4 events = 20 pairs.</p>
+<p>Implemented in <code>core.AppointmentStateMachine</code>. The original course design is 5 states
+× 4 events. The extensions grew the machine <em>by extension, never by rewrite</em> — the original
+REQUESTED/CONFIRMED blocks are unchanged:</p>
+<ul class="small">
+  <li>Phase C added the <code>WAITLISTED</code> state and the <code>PROMOTE</code> event.</li>
+  <li>Rule K added <code>RESCHEDULE</code> — a slot move that keeps the appointment in its current
+      state, so REQUESTED and CONFIRMED each get a self-loop.</li>
+  <li>Rule L added the terminal <code>OFFER_EXPIRED</code> state and the <code>EXPIRE_OFFER</code>
+      event (a promoted waitlist offer not accepted within 2 hours).</li>
+</ul>
+<p>Final machine: states <code>REQUESTED, CONFIRMED, ATTENDED, CANCELLED, NO_SHOW, WAITLISTED,
+OFFER_EXPIRED</code>; events <code>CONFIRM, CANCEL, ATTEND, MARK_NO_SHOW, PROMOTE, RESCHEDULE,
+EXPIRE_OFFER</code>. 7 × 7 = <strong>49 pairs: 10 valid, 39 invalid</strong>.</p>
 
 <h3>3.1 State transition table</h3>
 <table class="data">
-  <tr><th>From \ Event</th><th class="center">CONFIRM</th><th class="center">CANCEL</th><th class="center">ATTEND</th><th class="center">MARK_NO_SHOW</th></tr>
-  <tr><td><strong>REQUESTED</strong></td><td class="center yes">→ CONFIRMED</td><td class="center yes">→ CANCELLED</td><td class="center no">invalid</td><td class="center no">invalid</td></tr>
-  <tr><td><strong>CONFIRMED</strong></td><td class="center no">invalid</td><td class="center yes">→ CANCELLED</td><td class="center yes">→ ATTENDED</td><td class="center yes">→ NO_SHOW</td></tr>
-  <tr><td><strong>ATTENDED</strong> (terminal)</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td></tr>
-  <tr><td><strong>CANCELLED</strong> (terminal)</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td></tr>
-  <tr><td><strong>NO_SHOW</strong> (terminal)</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td><td class="center no">invalid</td></tr>
+  <tr><th>From \ Event</th><th class="center">CONFIRM</th><th class="center">CANCEL</th><th class="center">ATTEND</th><th class="center">MARK_NO_SHOW</th><th class="center">PROMOTE</th><th class="center">RESCHEDULE</th><th class="center">EXPIRE_OFFER</th></tr>
+  <tr><td><strong>REQUESTED</strong></td><td class="center yes">→ CONFIRMED</td><td class="center yes">→ CANCELLED</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center yes">→ REQUESTED</td><td class="center yes">→ OFFER_EXPIRED</td></tr>
+  <tr><td><strong>CONFIRMED</strong></td><td class="center no">inv</td><td class="center yes">→ CANCELLED</td><td class="center yes">→ ATTENDED</td><td class="center yes">→ NO_SHOW</td><td class="center no">inv</td><td class="center yes">→ CONFIRMED</td><td class="center no">inv</td></tr>
+  <tr><td><strong>WAITLISTED</strong></td><td class="center no">inv</td><td class="center yes">→ CANCELLED</td><td class="center no">inv</td><td class="center no">inv</td><td class="center yes">→ REQUESTED</td><td class="center no">inv</td><td class="center no">inv</td></tr>
+  <tr><td><strong>ATTENDED</strong> (terminal)</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td></tr>
+  <tr><td><strong>CANCELLED</strong> (terminal)</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td></tr>
+  <tr><td><strong>NO_SHOW</strong> (terminal)</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td></tr>
+  <tr><td><strong>OFFER_EXPIRED</strong> (terminal)</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td><td class="center no">inv</td></tr>
 </table>
-<p class="small">5 valid transitions (shown in green), 15 invalid pairs (shown in red) — every event
-on a terminal state is invalid, and REQUESTED/CONFIRMED each reject the events not listed for them.</p>
+<p class="small">Valid by row: REQUESTED 4, CONFIRMED 4, WAITLISTED 2, four terminal states 0 =
+<strong>10 valid</strong>. Invalid = 49 − 10 = <strong>39</strong>. REQUESTED and WAITLISTED are
+entered by construction (a fresh booking, or one made when the slot was taken), not by transition.</p>
 
 <h3>3.2 Derived test cases — valid transitions</h3>
 <table class="data">
@@ -158,17 +175,24 @@ on a terminal state is invalid, and REQUESTED/CONFIRMED each reject the events n
   <tr><td>TC-S03</td><td>CONFIRMED</td><td>ATTEND</td><td>ATTENDED</td><td><code>transition_confirmedAttend_movesToAttended</code></td></tr>
   <tr><td>TC-S04</td><td>CONFIRMED</td><td>CANCEL</td><td>CANCELLED</td><td><code>transition_confirmedCancel_movesToCancelled</code></td></tr>
   <tr><td>TC-S05</td><td>CONFIRMED</td><td>MARK_NO_SHOW</td><td>NO_SHOW</td><td><code>transition_confirmedMarkNoShow_movesToNoShow</code></td></tr>
+  <tr><td>TC-S09</td><td>WAITLISTED</td><td>PROMOTE</td><td>REQUESTED</td><td><code>transition_waitlistedPromote_movesToRequested</code></td></tr>
+  <tr><td>TC-S10</td><td>WAITLISTED</td><td>CANCEL</td><td>CANCELLED</td><td><code>transition_waitlistedCancel_movesToCancelled</code></td></tr>
+  <tr><td>TC-S11</td><td>REQUESTED</td><td>RESCHEDULE</td><td>REQUESTED (self-loop)</td><td><code>transition_requestedReschedule_staysRequested</code></td></tr>
+  <tr><td>TC-S12</td><td>CONFIRMED</td><td>RESCHEDULE</td><td>CONFIRMED (self-loop)</td><td><code>transition_confirmedReschedule_staysConfirmed</code></td></tr>
+  <tr><td>TC-S13</td><td>REQUESTED</td><td>EXPIRE_OFFER</td><td>OFFER_EXPIRED</td><td><code>transition_requestedExpireOffer_movesToOfferExpired</code></td></tr>
 </table>
+<p class="small">(TC-S06–S08 are the Rule 3b boundary cases, §3.4.)</p>
 
 <h3>3.3 Derived test cases — invalid transitions</h3>
-<p>Rather than hand-listing 15 rows (error-prone — easy to miss or duplicate a pair), the test
-generates <em>all</em> 20 state/event pairs and subtracts the 5 valid ones above, then runs a single
-parameterised test (<code>transition_invalidPair_throwsIllegalStateException</code>) once per
+<p>Rather than hand-listing 39 rows (error-prone — easy to miss or duplicate a pair), the test
+generates <em>all</em> 49 state/event pairs and subtracts the 10 valid ones above, then runs a
+single parameterised test (<code>transition_invalidPair_throwsIllegalStateException</code>) once per
 remaining pair, asserting each throws <code>IllegalStateException</code>. A companion test
-(<code>invalidStateEventPairs_containsExactlyFifteenPairs</code>) asserts the generated set has
-exactly 15 members, so the count itself — not just each individual case — is under test. This
-guarantees full coverage of the invalid region of the table without the risk of a manually
-transcribed list silently missing a cell.</p>
+(<code>invalidStateEventPairs_containsExactlyThirtyNinePairs</code>) asserts the generated set has
+exactly 39 members, so the count itself — not just each individual case — is under test. The test
+file also carries the hand-derivation of the "10 valid / 39 invalid" split, row by row, so the
+grid can be re-checked by inspection. This guarantees full coverage of the invalid region without
+the risk of a manually transcribed list silently missing a cell.</p>
 
 <h3>3.4 BVA — Rule 3b, late cancellation fee (24-hour guard)</h3>
 <p>A cancellation of a CONFIRMED appointment charges 50% of the consultation fee if made less than
@@ -181,19 +205,87 @@ layered on the CANCEL transition.</p>
   <tr><td>TC-S08</td><td>24h01m</td><td>just outside the late window</td><td>0 (free)</td><td><code>lateCancellationFee_atTwentyFourHoursOneMinute_isFree</code></td></tr>
 </table>
 
-<h2>4. Summary</h2>
+<h2>4. Summary — course rules</h2>
 <table class="data">
   <tr><th>Technique</th><th>Applied to</th><th>Test cases derived</th></tr>
   <tr><td>Equivalence partitioning + BVA</td><td>Rule 1 (fee by age)</td><td>13</td></tr>
   <tr><td>Decision table + BVA</td><td>Rule 2 (booking eligibility)</td><td>9</td></tr>
-  <tr><td>State transition testing</td><td>Rule 3 (lifecycle) — 5 valid + 15 invalid</td><td>20 (5 explicit + 15 via one parameterised test + 1 count-check)</td></tr>
+  <tr><td>State transition testing</td><td>Rule 3 (lifecycle) — 10 valid + 39 invalid</td><td>10 explicit valid + 39 via one parameterised test + 1 count-check</td></tr>
   <tr><td>BVA</td><td>Rule 3b (late cancellation fee)</td><td>3</td></tr>
-  <tr><td><strong>Total, core rules alone</strong></td><td></td><td><strong>45 cases</strong> (across the 24 + 9 + 13 = 46 <code>@Test</code>/parameterised methods in the three <code>core/</code> test classes — the extra method is the 15-pairs count-check itself)</td></tr>
 </table>
-<p class="small">These 45–46 core-level cases are the ones designed directly from formal
-technique application. The remaining unit tests (<code>AppointmentServiceTest</code>, 12 methods)
-and all integration/system tests apply the same rules again through the orchestration and UI
-layers, and are counted separately in the test summary report's pyramid figures.</p>
+
+<h2 class="page-break">5. The same four techniques applied to the extension rules (F–L)</h2>
+<p>Each extension rule is a pure function in <code>et.aau.clinic.core</code> with a class-level
+comment naming its technique and its boundaries, and a dedicated <code>*Test</code> class whose
+methods carry <code>TC-</code> traceability comments. The derivations are summarised here; the
+full case lists are in the test classes named below.</p>
+<table class="data">
+  <tr><th>Rule</th><th>Class</th><th>Technique(s)</th><th>Partitions / rules / boundaries</th><th>Test class (cases)</th></tr>
+  <tr><td>F — patient registration</td><td><code>PatientRegistrationPolicy</code></td>
+      <td>Decision table (5 conditions, priority order) + BVA</td>
+      <td>C1 name present · C2 username present · C3 not taken · C4 password ≥ 4 chars · C5 DOB in
+      the past and age ≤ 120. Boundaries: password length 3 vs 4; DOB today vs tomorrow; exactly
+      120y vs 120y + 1d; null password; null DOB.</td>
+      <td><code>PatientRegistrationPolicyTest</code> (TC-R01–R16 + TC-R10b)</td></tr>
+  <tr><td>G — doctor daily load</td><td><code>DoctorLoad</code></td>
+      <td>Equivalence partitioning + BVA</td>
+      <td>Partitions AVAILABLE / NEARLY_FULL / FULL over "scheduled ÷ limit". Boundaries around the
+      limit: one below, exactly at, one over.</td>
+      <td><code>DoctorLoadTest</code> (TC-G01–G08)</td></tr>
+  <tr><td>H — 24-hour reminder</td><td><code>ReminderPolicy</code></td>
+      <td>Decision table (4 conditions, priority order) + BVA</td>
+      <td>C1 CONFIRMED · C2 not already reminded · C3 slot not started · C4 within 24h. Window is
+      inclusive; boundaries 24h01m (skip), exactly 24h00m (send), 0h01m (send), slot already
+      started.</td>
+      <td><code>ReminderPolicyTest</code> (TC-H01–H12; 17 executions with the parameterised
+      non-CONFIRMED status case)</td></tr>
+  <tr><td>I — insurance coverage</td><td><code>CoverageCalculator</code></td>
+      <td>Equivalence partitioning + BVA</td>
+      <td>Partitions invalid-low (&lt; 0) / valid [0, 100] / invalid-high (&gt; 100). Boundaries
+      −1, 0, 1, 99, 100, 101, plus a rounding case.</td>
+      <td><code>CoverageCalculatorTest</code> (TC-I01–I09)</td></tr>
+  <tr><td>J — no-show suspension</td><td><code>SuspensionPolicy</code></td>
+      <td>BVA on two independent axes + EP</td>
+      <td>Count threshold: 2 clear, 3 suspended, 4 suspended. 90-day window edge: 89d inside,
+      exactly 90d inside (inclusive), 90d + 1 aged out. EP: each no-show timestamp in-window vs
+      aged out.</td>
+      <td><code>SuspensionPolicyTest</code> (TC-J01–J08)</td></tr>
+  <tr><td>K — reschedule</td><td><code>ReschedulePolicy</code></td>
+      <td>Decision table (3 conditions, priority order) + BVA + state transition (see §3)</td>
+      <td>C1 state reschedulable · C2 new slot free · C3 ≥ 2h notice on the new slot. BVA on the
+      2-hour notice: 1h59m rejects, exactly 2h00m allowed. Plus the RESCHEDULE self-loops in the
+      state machine (TC-S11, S12).</td>
+      <td><code>ReschedulePolicyTest</code> (TC-K01–K07)</td></tr>
+  <tr><td>L — waitlist offer expiry</td><td><code>WaitlistOfferPolicy</code></td>
+      <td>BVA on a single guard + state transition (see §3)</td>
+      <td>2-hour acceptance window: 1h59m still live, exactly 2h00m expired (inclusive), 2h01m
+      expired. Plus the EXPIRE_OFFER → OFFER_EXPIRED transition (TC-S13).</td>
+      <td><code>WaitlistOfferPolicyTest</code> (TC-L01–L04)</td></tr>
+</table>
+
+<h2>6. Pairwise (all-pairs) testing — self-service booking</h2>
+<p>A fifth technique, combinatorial testing, is applied to the booking outcome, which depends on
+six independent factors: age band (3 values), slot free (2), balance (2), notice (2), suspension
+(2) and coverage (3) — a 3 × 2 × 2 × 2 × 2 × 3 = <strong>144</strong>-combination space.</p>
+<p>A greedy all-pairs generator (<code>docs/pairwise-booking-gen.py</code>, reproducible) produces
+a <strong>10-row covering array</strong> in which every pair of factor values co-occurs in at least
+one row — the standard all-pairs criterion — seeded with the three approve-path rows so each
+age × coverage fee combination is also checked on a successful booking. One supplementary row is
+added so <code>OUTSTANDING_BALANCE</code> appears as an actually-reported reason (in the covering
+array it is always masked by a higher-priority condition). Total: <strong>11 cases</strong>,
+TC-P01–P11, in <code>BookingPairwiseIT</code>. The factor table, the covering array, the
+expected-outcome derivation and the observation that "pairwise coverage of the inputs does not
+imply coverage of the outcomes" are written up in <code>docs/pairwise-booking.md</code>.</p>
+
+<h2>7. Where each technique is demonstrated (Part B checklist)</h2>
+<table class="data">
+  <tr><th>Technique</th><th>Primary demonstration</th><th>Further instances</th></tr>
+  <tr><td>Equivalence partitioning</td><td>Rule 1 (§1)</td><td>Rules G, I; each no-show timestamp in Rule J</td></tr>
+  <tr><td>Boundary value analysis</td><td>Rule 1 (§1), Rule 3b (§3.4)</td><td>Rule 2 C3 (§2.3); Rules F, G, H, I, J, K, L</td></tr>
+  <tr><td>Decision table</td><td>Rule 2 (§2)</td><td>Rules F, H, K</td></tr>
+  <tr><td>State transition testing</td><td>Rule 3 (§3) — 7 × 7 grid</td><td>Rules K and L extend the same machine</td></tr>
+  <tr><td>Pairwise / combinatorial</td><td>Booking outcome (§6)</td><td>—</td></tr>
+</table>
 
 </body>
 </html>

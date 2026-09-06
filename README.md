@@ -81,6 +81,7 @@ cd backend
 mvn clean test      # unit tests only (fast, no browser needed)
 mvn clean verify     # everything: unit + integration + Selenium system tests,
                       # plus the 80% branch-coverage gate on et.aau.clinic.core
+mvn test-compile org.pitest:pitest-maven:mutationCoverage   # mutation testing (PIT)
 ```
 
 `mvn clean verify` launches a real headless Chrome for the Selenium system
@@ -90,7 +91,14 @@ original Thymeleaf pages in `backend/` - the React frontend has no
 automated tests of its own; it is a decorated UI addition, not part of the
 graded suite.
 
-Coverage report: `backend/target/site/jacoco/index.html` after `mvn clean verify`.
+The suite is 305 tests: 228 unit / 72 integration / 5 system (a pyramid).
+Mutation testing (PIT) runs separately - not bound to `verify` - against
+`et.aau.clinic.core`, with a 90% mutation-score gate (currently 100%,
+165/165). Pairwise (all-pairs) testing of the booking outcome is in
+`BookingPairwiseIT` (see `docs/pairwise-booking.md`).
+
+Reports after a run: `backend/target/site/jacoco/index.html` (coverage),
+`backend/target/pit-reports/index.html` (mutation).
 
 ### Test layout
 
@@ -106,9 +114,10 @@ backend/src/test/java/et/aau/clinic/
 ### GitHub Actions
 
 `.github/workflows/ci.yml` runs on every push and pull request: builds,
-runs the full test suite, checks the coverage gate, and uploads the JaCoCo
-report and JUnit/Failsafe XML reports as build artifacts. A coverage summary
-table is also written to the workflow's job summary.
+runs the full test suite, checks the coverage gate, then runs PIT mutation
+testing as a separate step. It uploads the JaCoCo report, the PIT report
+and the JUnit/Failsafe XML as build artifacts, and writes coverage and
+mutation-score summary tables to the workflow's job summary.
 
 ### Jenkins
 
@@ -121,17 +130,19 @@ docker compose up --build
 
 Then open <http://localhost:8080>, create a Pipeline job pointing at this
 repository, and it will run the `Jenkinsfile` at the repo root - checkout,
-`cd backend && mvn clean verify`, then publish the JUnit results and archive
-the JaCoCo report. (Both the Jenkinsfile and `ci.yml` run the Maven build
-from `backend/` - `frontend/` has no build step in either pipeline.)
+`cd backend && mvn clean verify`, a `Mutation Testing` stage, then publish
+the JUnit results and archive the JaCoCo and PIT reports. (Both the
+Jenkinsfile and `ci.yml` run the Maven build from `backend/` - `frontend/`
+has no build step in either pipeline.)
 
 ## Defect log
 
-Real defects found during development are logged in `docs/defect-log.md`
-(all three predate the `frontend/` addition). The JSON API added under
-`backend/.../web/api` for the React frontend is additive and untested - it
-delegates to the same `AppointmentService` the graded suite already covers,
-but the controllers and DTOs themselves have no dedicated tests.
+The five real defects found during development are logged in
+`docs/defect-log.md` (DEF-001 to DEF-003 in the original course scope,
+DEF-004 and DEF-005 during the extension work; DEF-005 fixes a
+concurrent-double-booking race). The JSON API under `backend/.../web/api`
+is additive - it delegates to the same `AppointmentService` the graded
+suite covers, but the controllers and DTOs have no dedicated tests.
 
 ## Project deliverables (PDF)
 

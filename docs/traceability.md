@@ -1,13 +1,16 @@
 # Traceability table — core/ test suite
 
 Maps every formal test-design technique to the exact test method that implements it. Each
-test method in `backend/src/test/java/et/aau/clinic/unit/{FeeCalculatorTest,BookingPolicyTest,
-AppointmentStateMachineTest}.java` now also carries a one-line comment with the same case ID
-used here, so the mapping can be verified from either direction: table → code, or code → table.
+test method carries a one-line comment with the same case ID used here, so the mapping can be
+verified from either direction: table → code, or code → table.
 
-No tests were added or removed to produce this table — it documents the 46 existing test
-methods across the three `core/` test classes (13 + 9 + 24), matching `docs/deliverables/
-02-test-design.html`.
+This table covers the **four course rules** (1, 2, 3, 3b). The seven extension rules (F–L) are
+traced the same way — a class-level comment naming the technique, `TC-` comments on each method
+— in their own `*Test` classes, and are summarised in `docs/deliverables/02-test-design.html`
+§5; pairwise testing of the booking outcome is in §6 of the same document. Rule 3's state
+machine grew from 5×4 to **7×7** (10 valid / 39 invalid) as the extensions added the
+`WAITLISTED` / `OFFER_EXPIRED` states and the `PROMOTE` / `RESCHEDULE` / `EXPIRE_OFFER` events;
+the section below reflects the final grid.
 
 ## Rule 1 — Fee by age (Equivalence Partitioning + Boundary Value Analysis)
 
@@ -53,17 +56,22 @@ priority ordering = 6 cases) + 3 BVA cases on the one numeric condition.
 
 ## Rule 3 — Appointment lifecycle (State Transition Testing)
 
-`AppointmentStateMachineTest.java`. States × events = 20 pairs (5 valid, 15 invalid).
+`AppointmentStateMachineTest.java`. States × events = 7 × 7 = 49 pairs (10 valid, 39 invalid).
 
 | Case ID | Technique element | Test method |
 |---|---|---|
-| TC-S01 | Valid transition: REQUESTED --confirm--> CONFIRMED | `transition_requestedConfirm_movesToConfirmed` |
-| TC-S02 | Valid transition: REQUESTED --cancel--> CANCELLED | `transition_requestedCancel_movesToCancelled` |
-| TC-S03 | Valid transition: CONFIRMED --attend--> ATTENDED | `transition_confirmedAttend_movesToAttended` |
-| TC-S04 | Valid transition: CONFIRMED --cancel--> CANCELLED | `transition_confirmedCancel_movesToCancelled` |
-| TC-S05 | Valid transition: CONFIRMED --markNoShow--> NO_SHOW | `transition_confirmedMarkNoShow_movesToNoShow` |
-| (generated, 15×) | All 15 invalid (state, event) pairs — the full 20-pair grid minus TC-S01–TC-S05 | `transition_invalidPair_throwsIllegalStateException` (parameterised, data from `invalidStateEventPairs()`) |
-| (meta-check) | Not itself technique-derived — asserts the generated invalid set has exactly 15 members, so the grid can't silently lose or duplicate a pair | `invalidStateEventPairs_containsExactlyFifteenPairs` |
+| TC-S01 | Valid: REQUESTED --confirm--> CONFIRMED | `transition_requestedConfirm_movesToConfirmed` |
+| TC-S02 | Valid: REQUESTED --cancel--> CANCELLED | `transition_requestedCancel_movesToCancelled` |
+| TC-S03 | Valid: CONFIRMED --attend--> ATTENDED | `transition_confirmedAttend_movesToAttended` |
+| TC-S04 | Valid: CONFIRMED --cancel--> CANCELLED | `transition_confirmedCancel_movesToCancelled` |
+| TC-S05 | Valid: CONFIRMED --markNoShow--> NO_SHOW | `transition_confirmedMarkNoShow_movesToNoShow` |
+| TC-S09 | Valid: WAITLISTED --promote--> REQUESTED | `transition_waitlistedPromote_movesToRequested` |
+| TC-S10 | Valid: WAITLISTED --cancel--> CANCELLED | `transition_waitlistedCancel_movesToCancelled` |
+| TC-S11 | Valid: REQUESTED --reschedule--> REQUESTED (self-loop, Rule K) | `transition_requestedReschedule_staysRequested` |
+| TC-S12 | Valid: CONFIRMED --reschedule--> CONFIRMED (self-loop, Rule K) | `transition_confirmedReschedule_staysConfirmed` |
+| TC-S13 | Valid: REQUESTED --expireOffer--> OFFER_EXPIRED (Rule L) | `transition_requestedExpireOffer_movesToOfferExpired` |
+| (generated, 39×) | All 39 invalid (state, event) pairs — the full 49-pair grid minus the 10 valid | `transition_invalidPair_throwsIllegalStateException` (parameterised, data from `invalidStateEventPairs()`) |
+| (meta-check) | Asserts the generated invalid set has exactly 39 members, so the grid can't silently lose or duplicate a pair; the test file also carries the row-by-row hand-derivation of the 10/39 split | `invalidStateEventPairs_containsExactlyThirtyNinePairs` |
 
 ## Rule 3b — Late cancellation fee (BVA, guard condition on the CANCEL transition)
 
@@ -81,9 +89,14 @@ priority ordering = 6 cases) + 3 BVA cases on the one numeric condition.
 |---|---|---|
 | Equivalence partitioning + BVA | `FeeCalculatorTest` | 13 |
 | Decision table + BVA | `BookingPolicyTest` | 9 |
-| State transition testing | `AppointmentStateMachineTest` | 5 valid + 15 invalid (1 parameterised test) + 1 meta-check = 21 methods |
+| State transition testing | `AppointmentStateMachineTest` | 10 valid + 39 invalid (1 parameterised test) + 1 meta-check = 12 methods (53 executions) |
 | BVA (guard condition) | `AppointmentStateMachineTest` | 3 |
-| **Total test methods in `core/`** | | **46** (13 + 9 + 24) |
+
+The extension rules F–L add `PatientRegistrationPolicyTest`, `DoctorLoadTest`,
+`ReminderPolicyTest`, `CoverageCalculatorTest`, `SuspensionPolicyTest`, `ReschedulePolicyTest`
+and `WaitlistOfferPolicyTest`, each with the same `TC-` traceability comments (case IDs
+`TC-R*`, `TC-G*`, `TC-H*`, `TC-I*`, `TC-J*`, `TC-K*`, `TC-L*`). Pairwise cases `TC-P01–P11`
+are in `BookingPairwiseIT`.
 
 Every method above is directly reachable from `et.aau.clinic.core.{FeeCalculator,
 BookingPolicy, AppointmentStateMachine}` — no test in this table touches Spring, the

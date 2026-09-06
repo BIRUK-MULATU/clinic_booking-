@@ -30,7 +30,7 @@ class ReschedulePolicyTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 3, 1, 9, 0);
 
-    // TC-I01 - Decision table Rule R1 (C1=F): a done appointment cannot be rescheduled.
+    // TC-K01 - Decision table Rule R1 (C1=F): a done appointment cannot be rescheduled.
     @ParameterizedTest
     @EnumSource(value = AppointmentStatus.class, names = {"REQUESTED", "CONFIRMED"}, mode = EXCLUDE)
     void reschedule_appointmentInNonReschedulableState_rejectsWithNotReschedulable(AppointmentStatus status) {
@@ -39,7 +39,7 @@ class ReschedulePolicyTest {
         assertRejected(decision, RescheduleRejection.NOT_RESCHEDULABLE);
     }
 
-    // TC-I02 - Decision table Rule R1 (C1=F) with C2/C3 don't-care shown invalid: still R1.
+    // TC-K02 - Decision table Rule R1 (C1=F) with C2/C3 don't-care shown invalid: still R1.
     @Test
     void reschedule_cancelledAppointment_toATakenSlotWithNoNotice_stillRejectsWithNotReschedulable() {
         RescheduleDecision decision =
@@ -48,7 +48,7 @@ class ReschedulePolicyTest {
         assertRejected(decision, RescheduleRejection.NOT_RESCHEDULABLE);
     }
 
-    // TC-I03 - Decision table Rule R2 (C1=T, C2=F): the target slot is taken.
+    // TC-K03 - Decision table Rule R2 (C1=T, C2=F): the target slot is taken.
     @Test
     void reschedule_requestedAppointment_toATakenSlot_rejectsWithSlotUnavailable() {
         RescheduleDecision decision =
@@ -57,7 +57,7 @@ class ReschedulePolicyTest {
         assertRejected(decision, RescheduleRejection.SLOT_UNAVAILABLE);
     }
 
-    // TC-I04 - Decision table Rule R2 (C1=T, C2=F) with C3 don't-care shown invalid: still R2.
+    // TC-K04 - Decision table Rule R2 (C1=T, C2=F) with C3 don't-care shown invalid: still R2.
     @Test
     void reschedule_confirmedAppointment_toATakenSlotWithNoNotice_stillRejectsWithSlotUnavailable() {
         RescheduleDecision decision =
@@ -66,7 +66,7 @@ class ReschedulePolicyTest {
         assertRejected(decision, RescheduleRejection.SLOT_UNAVAILABLE);
     }
 
-    // TC-I05 - Decision table Rule R3 (C1=T, C2=T, C3=F) / BVA: new slot 1h59m out - just short.
+    // TC-K05 - Decision table Rule R3 (C1=T, C2=T, C3=F) / BVA: new slot 1h59m out - just short.
     @Test
     void reschedule_toAFreeSlotOneHour59MinutesAway_rejectsWithInsufficientNotice() {
         RescheduleDecision decision = ReschedulePolicy.evaluate(
@@ -75,7 +75,7 @@ class ReschedulePolicyTest {
         assertRejected(decision, RescheduleRejection.INSUFFICIENT_NOTICE);
     }
 
-    // TC-I06 - BVA: new slot exactly 2h00m out - the boundary is allowed (">= 2 hours").
+    // TC-K06 - BVA: new slot exactly 2h00m out - the boundary is allowed (">= 2 hours").
     @Test
     void reschedule_toAFreeSlotExactly2HoursAway_isApproved() {
         RescheduleDecision decision = ReschedulePolicy.evaluate(
@@ -85,7 +85,7 @@ class ReschedulePolicyTest {
         assertThat(decision.getReason()).isNull();
     }
 
-    // TC-I07 - Decision table Rule R4 (all true): a confirmed appointment, free slot, plenty of notice.
+    // TC-K07 - Decision table Rule R4 (all true): a confirmed appointment, free slot, plenty of notice.
     @Test
     void reschedule_confirmedAppointment_toAFreeSlotWellInAdvance_isApproved() {
         RescheduleDecision decision = ReschedulePolicy.evaluate(

@@ -18,7 +18,7 @@ class WaitlistOfferPolicyTest {
 
     private static final LocalDateTime OFFERED_AT = LocalDateTime.of(2026, 4, 1, 12, 0);
 
-    // TC-J01 - BVA: 1h59m after the offer - still within the acceptance window.
+    // TC-L01 - BVA: 1h59m after the offer - still within the acceptance window.
     @Test
     void offer_oneHour59MinutesOld_isNotExpired() {
         LocalDateTime now = OFFERED_AT.plusHours(1).plusMinutes(59);
@@ -26,7 +26,7 @@ class WaitlistOfferPolicyTest {
         assertThat(WaitlistOfferPolicy.isExpired(OFFERED_AT, now)).isFalse();
     }
 
-    // TC-J02 - BVA: exactly 2h00m after the offer - the boundary itself has expired.
+    // TC-L02 - BVA: exactly 2h00m after the offer - the boundary itself has expired.
     @Test
     void offer_exactly2HoursOld_isExpired() {
         LocalDateTime now = OFFERED_AT.plusHours(2);
@@ -34,7 +34,7 @@ class WaitlistOfferPolicyTest {
         assertThat(WaitlistOfferPolicy.isExpired(OFFERED_AT, now)).isTrue();
     }
 
-    // TC-J03 - BVA: 2h01m after the offer - just past the boundary.
+    // TC-L03 - BVA: 2h01m after the offer - just past the boundary.
     @Test
     void offer_2HoursAndOneMinuteOld_isExpired() {
         LocalDateTime now = OFFERED_AT.plusHours(2).plusMinutes(1);
@@ -42,7 +42,7 @@ class WaitlistOfferPolicyTest {
         assertThat(WaitlistOfferPolicy.isExpired(OFFERED_AT, now)).isTrue();
     }
 
-    // TC-J04 - sanity: an offer made just now is nowhere near expired.
+    // TC-L04 - sanity: an offer made just now is nowhere near expired.
     @Test
     void offer_justMade_isNotExpired() {
         assertThat(WaitlistOfferPolicy.isExpired(OFFERED_AT, OFFERED_AT.plusMinutes(1))).isFalse();

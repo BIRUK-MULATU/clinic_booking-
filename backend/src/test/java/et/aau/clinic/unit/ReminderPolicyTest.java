@@ -32,7 +32,7 @@ class ReminderPolicyTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 1, 10, 10, 0);
 
-    // TC-F01 - Decision table Rule R1 (C1=F): a REQUESTED appointment is never reminded.
+    // TC-H01 - Decision table Rule R1 (C1=F): a REQUESTED appointment is never reminded.
     @Test
     void reminder_appointmentStillRequested_skipsWithNotConfirmed() {
         ReminderDecision decision =
@@ -41,7 +41,7 @@ class ReminderPolicyTest {
         assertSkipped(decision, ReminderSkipReason.NOT_CONFIRMED);
     }
 
-    // TC-F02 - Decision table Rule R1 (C1=F) with C2/C3/C4 don't-care shown invalid.
+    // TC-H02 - Decision table Rule R1 (C1=F) with C2/C3/C4 don't-care shown invalid.
     @Test
     void reminder_cancelledAppointmentAlreadyRemindedAndSlotPast_stillSkipsWithNotConfirmed() {
         // Proves C1 outranks the rest: reminded already AND slot in the past,
@@ -52,7 +52,7 @@ class ReminderPolicyTest {
         assertSkipped(decision, ReminderSkipReason.NOT_CONFIRMED);
     }
 
-    // TC-F03 - every non-CONFIRMED status is treated the same way by C1.
+    // TC-H03 - every non-CONFIRMED status is treated the same way by C1.
     @ParameterizedTest
     @EnumSource(value = AppointmentStatus.class, names = "CONFIRMED", mode = EXCLUDE)
     void reminder_anyNonConfirmedStatus_skipsWithNotConfirmed(AppointmentStatus status) {
@@ -61,7 +61,7 @@ class ReminderPolicyTest {
         assertSkipped(decision, ReminderSkipReason.NOT_CONFIRMED);
     }
 
-    // TC-F04 - Decision table Rule R2 (C1=T, C2=F): a reminder was already sent.
+    // TC-H04 - Decision table Rule R2 (C1=T, C2=F): a reminder was already sent.
     @Test
     void reminder_alreadySentAndSlotWithinWindow_skipsWithAlreadyReminded() {
         ReminderDecision decision =
@@ -70,7 +70,7 @@ class ReminderPolicyTest {
         assertSkipped(decision, ReminderSkipReason.ALREADY_REMINDED);
     }
 
-    // TC-F05 - Decision table Rule R2 (C1=T, C2=F) with C3 don't-care shown invalid.
+    // TC-H05 - Decision table Rule R2 (C1=T, C2=F) with C3 don't-care shown invalid.
     @Test
     void reminder_alreadySentAndSlotInThePast_stillSkipsWithAlreadyReminded() {
         // Proves C2 outranks C3.
@@ -80,7 +80,7 @@ class ReminderPolicyTest {
         assertSkipped(decision, ReminderSkipReason.ALREADY_REMINDED);
     }
 
-    // TC-F06 - Decision table Rule R3 (C1=T, C2=T, C3=F): the slot has already started.
+    // TC-H06 - Decision table Rule R3 (C1=T, C2=T, C3=F): the slot has already started.
     @Test
     void reminder_slotStartedOneMinuteAgo_skipsWithSlotAlreadyStarted() {
         ReminderDecision decision =
@@ -89,7 +89,7 @@ class ReminderPolicyTest {
         assertSkipped(decision, ReminderSkipReason.SLOT_ALREADY_STARTED);
     }
 
-    // TC-F07 - BVA on C3: the slot starts at exactly `now` (zero duration counts as started).
+    // TC-H07 - BVA on C3: the slot starts at exactly `now` (zero duration counts as started).
     @Test
     void reminder_slotStartsExactlyNow_skipsWithSlotAlreadyStarted() {
         ReminderDecision decision =
@@ -98,7 +98,7 @@ class ReminderPolicyTest {
         assertSkipped(decision, ReminderSkipReason.SLOT_ALREADY_STARTED);
     }
 
-    // TC-F08 - Decision table Rule R4 (C1..C3=T, C4=F): slot outside the 24h window.
+    // TC-H08 - Decision table Rule R4 (C1..C3=T, C4=F): slot outside the 24h window.
     // BVA: 24h01m away - just too early.
     @Test
     void reminder_slot24h01mAway_skipsWithNotYetDue() {
@@ -108,7 +108,7 @@ class ReminderPolicyTest {
         assertSkipped(decision, ReminderSkipReason.NOT_YET_DUE);
     }
 
-    // TC-F09 - BVA on the 24h window: the boundary itself. Exactly 24h00m away IS reminded
+    // TC-H09 - BVA on the 24h window: the boundary itself. Exactly 24h00m away IS reminded
     // (inclusive - deliberately the opposite of Rule 3b's "less than 24 hours").
     @Test
     void reminder_slotExactly24hAway_sends() {
@@ -118,7 +118,7 @@ class ReminderPolicyTest {
         assertSends(decision);
     }
 
-    // TC-F10 - BVA on the 24h window: just inside (23h59m away).
+    // TC-H10 - BVA on the 24h window: just inside (23h59m away).
     @Test
     void reminder_slot23h59mAway_sends() {
         ReminderDecision decision = ReminderPolicy.decide(
@@ -127,7 +127,7 @@ class ReminderPolicyTest {
         assertSends(decision);
     }
 
-    // TC-F11 - BVA near the other end of the window: 1 minute before the slot.
+    // TC-H11 - BVA near the other end of the window: 1 minute before the slot.
     @Test
     void reminder_slotOneMinuteAway_sends() {
         ReminderDecision decision = ReminderPolicy.decide(
@@ -136,7 +136,7 @@ class ReminderPolicyTest {
         assertSends(decision);
     }
 
-    // TC-F12 - sanity: a slot several days out is not yet due.
+    // TC-H12 - sanity: a slot several days out is not yet due.
     @Test
     void reminder_slotThreeDaysAway_skipsWithNotYetDue() {
         ReminderDecision decision = ReminderPolicy.decide(

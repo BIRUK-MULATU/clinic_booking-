@@ -38,7 +38,7 @@
     <tr><th>Student</th><td>Biruk Mulatu</td></tr>
     <tr><th>Student ID</th><td>[STUDENT ID — fill in before submission]</td></tr>
     <tr><th>Instructor</th><td>Abel Tadesse</td></tr>
-    <tr><th>Date</th><td>4 September 2026</td></tr>
+    <tr><th>Date</th><td>4 September 2026 (revised 6 September 2026)</td></tr>
     <tr><th>Group size</th><td>1 (solo submission)</td></tr>
   </table>
 </div>
@@ -47,23 +47,60 @@
 <p>This plan covers the testing effort for the Clinic Booking System, a small Spring Boot web
 application built as the vehicle for this course's testing techniques. Per the assignment brief,
 the application itself earns no marks; this document plans the testing of its business logic and
-user interface, not the addition of further features.</p>
+user interface.</p>
+<p class="small">The four course rules below (1, 2, 3, 3b) are the primary vehicle for Part B's
+formal test design — each is deliberately shaped to feed exactly one technique. During development
+the application was extended with further business rules (F–L) and subsystems; these are tested to
+the same standard, with the same techniques, and are included in the coverage and metric figures.
+They are listed here for completeness; the detailed technique working in the test design document
+stays focused on rules 1–3b so the derivation is easy to follow.</p>
 
 <h3>1.1 In scope</h3>
+<p><strong>Core course rules (Part B vehicle):</strong></p>
 <ul>
   <li><strong>Rule 1 — consultation fee by age</strong> (<code>core.FeeCalculator</code>): three age
-      bands (CHILD, ADULT, SENIOR) plus rejection of out-of-range ages.</li>
+      bands (CHILD, ADULT, SENIOR) plus rejection of out-of-range ages. → equivalence partitioning,
+      boundary value analysis.</li>
   <li><strong>Rule 2 — booking eligibility</strong> (<code>core.BookingPolicy</code>): a three-condition
       decision table (slot free, no outstanding balance, ≥2 hours notice) evaluated in strict
-      priority order.</li>
-  <li><strong>Rule 3 — appointment lifecycle</strong> (<code>core.AppointmentStateMachine</code>): the
-      5-state, 4-event state machine and its 15 invalid transitions.</li>
+      priority order. → decision table.</li>
+  <li><strong>Rule 3 — appointment lifecycle</strong> (<code>core.AppointmentStateMachine</code>):
+      the appointment state machine (now 7 states × 7 events, 10 valid and 39 invalid transitions
+      after the extensions). → state transition testing.</li>
   <li><strong>Rule 3b — late cancellation fee</strong>: a 24-hour guard condition on top of the
-      CANCEL transition.</li>
-  <li>The orchestration layer (<code>AppointmentService</code>) that wires the three rules to
+      CANCEL transition. → boundary value analysis.</li>
+</ul>
+<p><strong>Extension rules</strong> (tested with the same four techniques; see the test design
+document §6 and the named test classes):</p>
+<ul>
+  <li><strong>Rule F</strong> — patient-account registration (<code>PatientRegistrationPolicy</code>):
+      five-condition decision table + BVA on password length and age.</li>
+  <li><strong>Rule G</strong> — doctor daily-capacity load band (<code>DoctorLoad</code>): EP over
+      AVAILABLE / NEARLY_FULL / FULL + BVA around the limit.</li>
+  <li><strong>Rule H</strong> — 24-hour appointment reminder (<code>ReminderPolicy</code>): decision
+      table + BVA on the 24-hour window.</li>
+  <li><strong>Rule I</strong> — insurance coverage (<code>CoverageCalculator</code>): EP + BVA on
+      the 0–100 % range.</li>
+  <li><strong>Rule J</strong> — no-show suspension, three strikes in 90 days
+      (<code>SuspensionPolicy</code>): two independent BVA targets (the count and the window edge).</li>
+  <li><strong>Rule K</strong> — reschedule (<code>ReschedulePolicy</code>): decision table + BVA on
+      the 2-hour notice + a new state-machine self-loop.</li>
+  <li><strong>Rule L</strong> — waitlist offer expiry (<code>WaitlistOfferPolicy</code>): BVA on the
+      2-hour acceptance window + a new terminal state.</li>
+</ul>
+<p><strong>Also in scope:</strong></p>
+<ul>
+  <li>The orchestration layer (<code>AppointmentService</code>) that wires the rules to
       repositories, a <code>Clock</code>, and a notification service.</li>
-  <li>The web layer (login, slot list, booking form, confirmation, my-appointments) and the one
-      end-to-end user journey it supports.</li>
+  <li>The web layer (login, slot list, booking form, confirmation, my-appointments) and the
+      end-to-end user journeys it supports.</li>
+  <li><strong>Pairwise (all-pairs) testing</strong> of self-service booking over its six independent
+      factors — an additional combinatorial technique (<code>BookingPairwiseIT</code>,
+      <code>docs/pairwise-booking.md</code>).</li>
+  <li><strong>Mutation testing</strong> (PIT) of <code>et.aau.clinic.core</code> — a second quality
+      gate that checks the tests <em>detect</em> faults, not just execute lines.</li>
+  <li><strong>Concurrent booking of the same slot</strong> — after DEF-005 this is in scope and
+      covered by <code>BookingConcurrencyIT</code> (8 threads racing one slot).</li>
   <li>Continuous integration (GitHub Actions and Jenkins) and the regression it is required to catch.</li>
 </ul>
 
@@ -71,10 +108,13 @@ user interface, not the addition of further features.</p>
 <ul>
   <li>Non-functional testing: load, performance, accessibility, security penetration testing.</li>
   <li>Real SMS delivery — <code>NotificationService</code> has only a logging implementation, by
-      design (CLAUDE.md); no real gateway exists to test against.</li>
-  <li>Multi-user concurrency (two patients racing for the same slot at the same instant) — the
-      eligibility check (<code>C1</code>) is tested against the repository state at request time,
-      not under concurrent load.</li>
+      design; no real gateway exists to test against.</li>
+  <li>The React front end (<code>frontend/</code>) — a decorative alternative UI over the same JSON
+      API; it has no automated tests of its own and is not part of the graded suite. The
+      server-rendered Thymeleaf pages are what Selenium drives and JaCoCo measures.</li>
+  <li>The JSON API controllers and DTOs under <code>web/api/</code> — thin pass-throughs to the
+      already-tested <code>AppointmentService</code>; exercised indirectly by the MockMvc
+      integration tests but with no dedicated unit tests.</li>
   <li>Formal user acceptance testing (UAT) with real clinic staff — there is no such audience for a
       course project; the Selenium system tests stand in for the acceptance level (see 2.1).</li>
 </ul>
@@ -89,15 +129,18 @@ of system tests. Each level uses the technique(s) it is best suited to:</p>
   <tr><td>Unit</td><td><code>core/</code> pure functions, in isolation; <code>AppointmentService</code>
       orchestration with all collaborators replaced by test doubles</td>
       <td>Equivalence partitioning, boundary value analysis, decision table, state transition
-      testing (Part B of this project)</td></tr>
+      testing (Part B of this project). Mutation testing (PIT) runs on top of this level.</td></tr>
   <tr><td>Integration</td><td><code>AppointmentService</code> + real Spring Data JPA repositories +
-      real H2 database; controllers via MockMvc (real HTTP request/response cycle, no browser)</td>
+      real H2 database; controllers via MockMvc (real HTTP request/response cycle, no browser);
+      one true multi-threaded concurrency test</td>
       <td>Confirms the wiring and the repository queries behind the rules above actually work, not
-      just the boolean logic in isolation</td></tr>
-  <tr><td>System</td><td>The full booking journey through a real headless Chrome browser via
-      Selenium, using the Page Object pattern</td>
-      <td>End-to-end path testing of the one required user journey: log in → view slots → book →
-      see fee on confirmation → cancel</td></tr>
+      just the boolean logic in isolation. Pairwise (all-pairs) testing of the booking outcome sits
+      at this level.</td></tr>
+  <tr><td>System</td><td>Booking journeys through a real headless Chrome browser via Selenium, using
+      the Page Object pattern</td>
+      <td>End-to-end path testing of the required user journey (log in → view slots → book → see fee
+      on confirmation → cancel), plus journeys for insurance coverage, no-show suspension and
+      reschedule</td></tr>
 </table>
 <p class="small">Acceptance-level testing is represented by the same Selenium journey: for a
 course project with no external stakeholder to run a separate UAT phase, the system test acting
@@ -121,10 +164,15 @@ is treated as the acceptance check that the application meets its use case.</p>
       so calls can still be verified while the real logging behaviour still runs</td></tr>
 </table>
 
-<h3>2.3 Coverage target</h3>
-<p>At least 80% branch coverage of <code>et.aau.clinic.core</code>, enforced by a JaCoCo
-<code>check</code> rule so <code>mvn verify</code> fails the build if it regresses. See the
-coverage report for the actual figure achieved.</p>
+<h3>2.3 Coverage and quality targets</h3>
+<ul>
+  <li><strong>Branch coverage:</strong> at least 80% of <code>et.aau.clinic.core</code>, enforced by
+      a JaCoCo <code>check</code> rule so <code>mvn verify</code> fails the build if it regresses.
+      Actual figure achieved: 100% (134/134 branches) — see the coverage report.</li>
+  <li><strong>Mutation score:</strong> at least 90% on <code>et.aau.clinic.core</code>, enforced by
+      a PIT <code>mutationThreshold</code>. Actual: 100% (165/165 mutants killed). Mutation testing
+      is not bound to <code>verify</code>; it runs as its own step in both CI pipelines.</li>
+</ul>
 
 <h2>3. Entry and exit criteria</h2>
 <h3>3.1 Entry criteria (before a test level is considered ready to run)</h3>
@@ -142,9 +190,14 @@ coverage report for the actual figure achieved.</p>
   <li><code>mvn clean verify</code> passes: all unit, integration and system tests green, in one run.</li>
   <li>Branch coverage of <code>et.aau.clinic.core</code> is at least 80% (JaCoCo gate passing, not
       just reported).</li>
-  <li>Every valid and invalid state transition in Rule 3's 5×4 grid has an explicit test.</li>
-  <li>Every boundary listed in this project's domain rules (ages −1, 0, 17, 18, 64, 65, 120, 121;
-      the 2-hour notice boundary; the 24-hour cancellation boundary) has an explicit test.</li>
+  <li>Mutation score of <code>et.aau.clinic.core</code> is at least 90% (PIT gate passing).</li>
+  <li>Every valid and invalid state transition in Rule 3's 7×7 grid has an explicit test.</li>
+  <li>Every boundary in the project's domain rules has an explicit test: ages −1, 0, 17, 18, 64, 65,
+      120, 121; the 2-hour notice boundary; the 24-hour cancellation boundary; the password-length
+      and age edges of Rule F; the doctor-limit edge of Rule G; the 24-hour reminder window
+      (Rule H); the 0/100 % coverage edges (Rule I); the count-of-3 and 90-day-window edges of
+      Rule J; the 2-hour reschedule-notice edge (Rule K); the 2-hour offer-acceptance window
+      (Rule L).</li>
   <li>GitHub Actions is green on the current <code>main</code>, and the Jenkins pipeline has been
       run at least once to a successful build via the provided Docker setup.</li>
   <li>A regression has been deliberately introduced, observed failing in CI, and fixed, with both
@@ -171,10 +224,19 @@ right, since more branching means more ways to get it wrong.</p>
       in the regression, see <code>docs/regression-demo.md</code>) silently over- or under-charges
       real people — exactly the kind of defect BVA exists to catch, and exactly what happened when
       it was deliberately introduced.</td></tr>
+  <tr><td><strong>P1 — highest</strong></td><td>Concurrent booking of one slot
+      (<code>AppointmentService</code> + slot lock)</td>
+      <td>A check-then-act race on Rule 2's C1: two requests can both read a slot as free and both
+      be created, permanently double-booking it. Found and fixed as DEF-005; guarded by a
+      dedicated 8-thread concurrency test.</td></tr>
   <tr><td><strong>P2 — high</strong></td><td>Rule 3, state machine invalid transitions</td>
       <td>Data-integrity risk: an appointment that can be re-confirmed after cancellation, or
-      attended twice, corrupts clinic records. 15 of 20 state/event pairs must be rejected, so the
-      chance of missing one is real without a systematic (not hand-picked) test list.</td></tr>
+      attended twice, corrupts clinic records. 39 of 49 state/event pairs must be rejected, so the
+      chance of missing one is real without a systematic (grid-generated, not hand-picked) test
+      list.</td></tr>
+  <tr><td><strong>P2 — high</strong></td><td>Rule J, no-show suspension</td>
+      <td>Two independent thresholds (a count of 3, a 90-day window) that gate whether a patient can
+      book at all; an off-by-one on either wrongly locks out or wrongly admits a patient.</td></tr>
   <tr><td><strong>P2 — high</strong></td><td>Rule 3b, late cancellation fee boundary</td>
       <td>A second, independent financial boundary (24 hours) layered on top of a valid CANCEL
       transition; easy to get an off-by-one on <code>&lt;</code> vs <code>&le;</code> here exactly
@@ -204,6 +266,11 @@ plan since the code phases were completed ahead of the documentation):</p>
       DEF-003 found and fixed</td></tr>
   <tr><td>2026-09-04</td><td>This test plan and the remaining three PDF deliverables (test design,
       defect log + metrics, test summary + reflection) written up from the evidence above</td></tr>
+  <tr><td>2026-09-05 / 09-06</td><td>Application extended with rules F–L and supporting subsystems,
+      each tested to the same standard; pairwise testing added for the booking outcome; mutation
+      testing (PIT) added and wired into both pipelines; DEF-004 and DEF-005 found and fixed
+      (DEF-005 closes the previously-known concurrent-booking gap). All four deliverables revised
+      to the extended scope.</td></tr>
   <tr><td>By 2026-09-13</td><td>Submission deadline — repository link and four PDFs on Google
       Classroom</td></tr>
 </table>

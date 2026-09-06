@@ -28,7 +28,7 @@ class SuspensionPolicyTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 6, 1, 10, 0);
 
-    // TC-H01 - count BVA: no no-shows at all is clear.
+    // TC-J01 - count BVA: no no-shows at all is clear.
     @Test
     void suspension_noNoShows_isClear() {
         SuspensionDecision decision = SuspensionPolicy.evaluate(List.of(), NOW);
@@ -36,7 +36,7 @@ class SuspensionPolicyTest {
         assertClear(decision, 0);
     }
 
-    // TC-H02 - count BVA: 2 recent no-shows is one below the threshold - still clear.
+    // TC-J02 - count BVA: 2 recent no-shows is one below the threshold - still clear.
     @Test
     void suspension_twoRecentNoShows_isClear() {
         SuspensionDecision decision = SuspensionPolicy.evaluate(
@@ -45,7 +45,7 @@ class SuspensionPolicyTest {
         assertClear(decision, 2);
     }
 
-    // TC-H03 - count BVA: 3 recent no-shows hits the threshold - suspended.
+    // TC-J03 - count BVA: 3 recent no-shows hits the threshold - suspended.
     @Test
     void suspension_threeRecentNoShows_isSuspended() {
         SuspensionDecision decision = SuspensionPolicy.evaluate(
@@ -54,7 +54,7 @@ class SuspensionPolicyTest {
         assertSuspended(decision, 3);
     }
 
-    // TC-H04 - count BVA: 4 recent no-shows is above the threshold - still suspended.
+    // TC-J04 - count BVA: 4 recent no-shows is above the threshold - still suspended.
     @Test
     void suspension_fourRecentNoShows_isSuspended() {
         SuspensionDecision decision = SuspensionPolicy.evaluate(
@@ -63,7 +63,7 @@ class SuspensionPolicyTest {
         assertSuspended(decision, 4);
     }
 
-    // TC-H05 - window BVA: the third no-show is exactly 90 days ago (inclusive edge) - it counts,
+    // TC-J05 - window BVA: the third no-show is exactly 90 days ago (inclusive edge) - it counts,
     // so the patient is suspended.
     @Test
     void suspension_thirdNoShowExactly90DaysAgo_stillCounts_isSuspended() {
@@ -73,7 +73,7 @@ class SuspensionPolicyTest {
         assertSuspended(decision, 3);
     }
 
-    // TC-H06 - window BVA: the third no-show is 90 days + 1 ago - it has aged out, leaving only
+    // TC-J06 - window BVA: the third no-show is 90 days + 1 ago - it has aged out, leaving only
     // 2 in the window, so the patient is clear.
     @Test
     void suspension_thirdNoShow90DaysAndOneAgo_hasAgedOut_isClear() {
@@ -83,7 +83,7 @@ class SuspensionPolicyTest {
         assertClear(decision, 2);
     }
 
-    // TC-H07 - window EP: old no-shows (well outside 90 days) are ignored entirely even when there
+    // TC-J07 - window EP: old no-shows (well outside 90 days) are ignored entirely even when there
     // are many of them.
     @Test
     void suspension_manyOldNoShows_areIgnored_isClear() {
@@ -93,7 +93,7 @@ class SuspensionPolicyTest {
         assertClear(decision, 0);
     }
 
-    // TC-H08 - mixed: 2 inside the window + 1 aged out = clear; adding one more inside tips it.
+    // TC-J08 - mixed: 2 inside the window + 1 aged out = clear; adding one more inside tips it.
     @Test
     void suspension_twoInsideOneOut_isClear_butThreeInsideIsSuspended() {
         List<LocalDateTime> twoInsideOneOut =
