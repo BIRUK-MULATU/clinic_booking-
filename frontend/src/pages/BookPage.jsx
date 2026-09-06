@@ -22,6 +22,7 @@ export default function BookPage() {
   }, [slotId]);
 
   // Submit the booking request and route the patient based on the server response.
+  // Submit the booking request and route the patient based on the server response.
   async function handleConfirm() {
     setSubmitting(true);
     setError("");
