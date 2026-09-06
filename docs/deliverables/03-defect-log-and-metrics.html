@@ -119,9 +119,9 @@ Error: Process completed with exit code 2.</pre>
   <p><strong>Fix:</strong> Added a file-existence check at the top of the step: if
   <code>jacoco.csv</code> is missing, write a one-line "no coverage report was generated" note to
   the job summary and exit 0 instead of trying to parse a file that was never created.</p>
-  <p><strong>Verification:</strong> Reproduced on the <code>regression-demo</code> branch (failing
-  run 33305001970), fixed in the same commit that reverted the regression (passing run
-  33305212152) — see §3.</p>
+  <p><strong>Verification:</strong> Reproduced by the deliberate regression commit
+  <code>9b6c9fe</code> (failing run 33305001970), fixed in the commit that reverted the regression,
+  <code>4a98ab9</code> (passing run 33305212152) — see §3.</p>
 </div>
 
 <div class="defect">
@@ -295,7 +295,8 @@ locate element: {"method":"css selector","selector":"#confirmation-status"}</pre
 
 <h2>3. Regression demonstration (context for the defect/CI story)</h2>
 <p>A deliberate regression was introduced to prove the pipeline actually catches breakage, not just
-that tests exist. Branch <code>regression-demo</code>, commit <code>9b6c9fe</code>, shifted Rule 1's
+that tests exist. Commit <code>9b6c9fe</code> (now in <code>main</code>'s history, immediately
+followed by its revert <code>4a98ab9</code>) shifted Rule 1's
 CHILD/ADULT boundary from <code>age &le; 17</code> to <code>age &le; 16</code> — a one-line off-by-one
 that would silently overcharge every 17-year-old patient (ADULT fee, 250 ETB, instead of CHILD, 100
 ETB) if it reached production.</p>

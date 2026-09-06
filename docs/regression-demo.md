@@ -5,7 +5,10 @@ pipeline catching it, then fix it and show the pipeline pass again.
 
 ## The regression
 
-Branch: `regression-demo` (never merged into `main` - `main` was never broken).
+The break and its fix were made on a short-lived `regression-demo` branch and are
+now part of `main`'s history as commits `9b6c9fe` (break) and `4a98ab9` (fix), one
+immediately after the other - `main`'s current `FeeCalculator` has the correct
+`age <= 17` boundary.
 
 **Commit `9b6c9fe`** - "Regression demo: shift CHILD upper age boundary from
 17 to 16". Changed one line in `FeeCalculator.calculate`:
@@ -69,5 +72,5 @@ system tests) green, coverage gate passed.
 | Before | `9b6c9fe` | [run 33305001970](https://github.com/BIRUK-MULATU/clinic_booking-/actions/runs/33305001970) | Failure (22s) |
 | After | `4a98ab9` | [run 33305212152](https://github.com/BIRUK-MULATU/clinic_booking-/actions/runs/33305212152) | Success (52s) |
 
-Both runs remain visible under the `regression-demo` branch in the repo's
-Actions tab for as long as the branch/workflow history is retained.
+Both runs remain visible in the repository's Actions tab (GitHub keeps workflow
+run history independently of whether the branch that triggered them still exists).
