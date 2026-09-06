@@ -290,6 +290,64 @@ class AppointmentServiceTest {
         assertThat(available).containsExactly(future);
     }
 
+    // --- Rule F: the 24-hour reminder sweep -------------------------------------------------
+    // ReminderPolicy's own boundaries are covered in ReminderPolicyTest; these check that the
+    // service pulls the right rows, sends via the seam, and stamps reminderSentAt so it never
+    // double-sends. The Clock stub fixes "now" so "within 24h" is exact.
+
+    @Test
+    void sendDueReminders_confirmedAppointmentWithinWindow_sendsReminderAndStampsIt() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusHours(5));
+        Appointment appointment = new Appointment(
+                patient, slot, AppointmentStatus.CONFIRMED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        when(appointmentRepository.findByStatusAndReminderSentAtIsNull(AppointmentStatus.CONFIRMED))
+                .thenReturn(List.of(appointment));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        int sent = service.sendDueReminders();
+
+        assertThat(sent).isEqualTo(1);
+        verify(notificationService).sendReminder(patient, appointment);
+        assertThat(appointment.getReminderSentAt()).isEqualTo(FIXED_NOW);
+    }
+
+    @Test
+    void sendDueReminders_confirmedAppointmentStillOutsideWindow_sendsNothing() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusHours(48)); // more than 24h away
+        Appointment appointment = new Appointment(
+                patient, slot, AppointmentStatus.CONFIRMED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        when(appointmentRepository.findByStatusAndReminderSentAtIsNull(AppointmentStatus.CONFIRMED))
+                .thenReturn(List.of(appointment));
+
+        int sent = service.sendDueReminders();
+
+        assertThat(sent).isZero();
+        verify(notificationService, never()).sendReminder(any(), any());
+        verify(appointmentRepository, never()).save(any());
+        assertThat(appointment.getReminderSentAt()).isNull();
+    }
+
+    @Test
+    void sendDueReminders_twoConfirmedAppointments_remindsOnlyTheOneInsideTheWindow() {
+        Patient soon = adultPatient();
+        Appointment dueNow = new Appointment(soon, new Slot(FIXED_NOW.plusHours(3)),
+                AppointmentStatus.CONFIRMED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        Patient later = new Patient("Sara Nega", LocalDate.of(1988, 2, 2), "sara", "secret", "0911222333");
+        Appointment notYet = new Appointment(later, new Slot(FIXED_NOW.plusDays(3)),
+                AppointmentStatus.CONFIRMED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        when(appointmentRepository.findByStatusAndReminderSentAtIsNull(AppointmentStatus.CONFIRMED))
+                .thenReturn(List.of(dueNow, notYet));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        int sent = service.sendDueReminders();
+
+        assertThat(sent).isEqualTo(1);
+        verify(notificationService).sendReminder(soon, dueNow);
+        verify(notificationService, never()).sendReminder(eq(later), any());
+    }
+
     private Patient adultPatient() {
         return new Patient("Abebe Kebede", LocalDate.of(1990, 5, 1), "abebe", "secret", "0911000000");
     }

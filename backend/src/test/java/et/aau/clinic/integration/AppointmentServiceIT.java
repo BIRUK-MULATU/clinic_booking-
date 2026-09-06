@@ -30,6 +30,7 @@ import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -133,6 +134,33 @@ class AppointmentServiceIT {
         Appointment persisted = appointmentRepository.findById(appointmentId).orElseThrow();
         assertThat(persisted.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
         assertThat(persisted.getCancellationFee()).isEqualByComparingTo(new BigDecimal("125.0"));
+    }
+
+    @Test
+    void sendDueReminders_confirmedAppointmentWithin24h_remindsOnceAndNotAgainOnTheNextSweep() {
+        Slot slot = slotRepository.save(new Slot(FIXED_NOW.plusHours(5)));
+        BookingOutcome outcome = appointmentService.requestBooking(patient.getId(), slot.getId());
+        Long appointmentId = outcome.appointment().getId();
+        appointmentService.confirm(appointmentId);
+
+        int firstSweep = appointmentService.sendDueReminders();
+        int secondSweep = appointmentService.sendDueReminders();
+
+        assertThat(firstSweep).isEqualTo(1);
+        assertThat(secondSweep).isZero(); // reminderSentAt is now set, so the row is filtered out
+        verify(notificationService).sendReminder(any(Patient.class), any(Appointment.class));
+        Appointment persisted = appointmentRepository.findById(appointmentId).orElseThrow();
+        assertThat(persisted.getReminderSentAt()).isEqualTo(FIXED_NOW);
+    }
+
+    @Test
+    void sendDueReminders_confirmedAppointmentStillDaysAway_sendsNothing() {
+        Slot slot = slotRepository.save(new Slot(FIXED_NOW.plusDays(4)));
+        BookingOutcome outcome = appointmentService.requestBooking(patient.getId(), slot.getId());
+        appointmentService.confirm(outcome.appointment().getId());
+
+        assertThat(appointmentService.sendDueReminders()).isZero();
+        verify(notificationService, never()).sendReminder(any(), any());
     }
 
     @Test

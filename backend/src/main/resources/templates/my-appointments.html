@@ -15,6 +15,10 @@
         <td th:text="${#temporals.format(appt.slot.startTime, 'yyyy-MM-dd HH:mm')}"></td>
         <td th:id="'appointment-status-' + ${appt.id}" th:text="${appt.status}"></td>
         <td th:id="'appointment-fee-' + ${appt.id}" th:text="${appt.feeAmount}"></td>
+        <td th:id="'appointment-reminder-' + ${appt.id}"
+            th:text="${appt.reminderSentAt != null}
+                     ? 'Reminder sent ' + ${#temporals.format(appt.reminderSentAt, 'yyyy-MM-dd HH:mm')}
+                     : 'No reminder yet'"></td>
         <td>
             <form th:if="${appt.status.name() == 'REQUESTED'}" method="post"
                   th:action="@{/appointments/{id}/confirm(id=${appt.id})}">

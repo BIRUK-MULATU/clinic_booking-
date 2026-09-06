@@ -48,6 +48,14 @@ public class Appointment {
 
     private BigDecimal cancellationFee;
 
+    /**
+     * When the 24-hour reminder was sent (hospital-expansion Rule F).
+     * Stays null until ReminderPolicy fires; its non-null-ness is also
+     * condition C2 ("not already reminded"), so the scheduled job never
+     * sends twice.
+     */
+    private LocalDateTime reminderSentAt;
+
     protected Appointment() {
         // required by JPA
     }
@@ -100,5 +108,13 @@ public class Appointment {
 
     public void setCancellationFee(BigDecimal cancellationFee) {
         this.cancellationFee = cancellationFee;
+    }
+
+    public LocalDateTime getReminderSentAt() {
+        return reminderSentAt;
+    }
+
+    public void setReminderSentAt(LocalDateTime reminderSentAt) {
+        this.reminderSentAt = reminderSentAt;
     }
 }

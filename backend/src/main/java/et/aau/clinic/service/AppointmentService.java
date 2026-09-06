@@ -6,6 +6,7 @@ import et.aau.clinic.core.BookingDecision;
 import et.aau.clinic.core.BookingPolicy;
 import et.aau.clinic.core.Fee;
 import et.aau.clinic.core.FeeCalculator;
+import et.aau.clinic.core.ReminderPolicy;
 import et.aau.clinic.domain.Appointment;
 import et.aau.clinic.domain.AppointmentStatus;
 import et.aau.clinic.domain.Patient;
@@ -163,6 +164,31 @@ public class AppointmentService {
         Appointment appointment = new Appointment(
                 patient, slot, AppointmentStatus.WAITLISTED, fee.category(), fee.amount(), now);
         return appointmentRepository.save(appointment);
+    }
+
+    /**
+     * Hospital-expansion Rule F: the scheduled job's entry point. Pulls every
+     * CONFIRMED appointment that has not been reminded yet, asks ReminderPolicy
+     * (against the injected Clock) which ones are now within the 24-hour window,
+     * and for each of those sends one reminder SMS and stamps reminderSentAt so
+     * the next run skips it. Returns how many were sent - handy for the job's
+     * log line and for asserting in tests.
+     */
+    public int sendDueReminders() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        int sent = 0;
+        for (Appointment appointment :
+                appointmentRepository.findByStatusAndReminderSentAtIsNull(AppointmentStatus.CONFIRMED)) {
+            boolean alreadyReminded = appointment.getReminderSentAt() != null;
+            if (ReminderPolicy.decide(appointment.getStatus(), now,
+                    appointment.getSlot().getStartTime(), alreadyReminded).isDue()) {
+                notificationService.sendReminder(appointment.getPatient(), appointment);
+                appointment.setReminderSentAt(now);
+                appointmentRepository.save(appointment);
+                sent++;
+            }
+        }
+        return sent;
     }
 
     public Appointment confirm(Long appointmentId) {
