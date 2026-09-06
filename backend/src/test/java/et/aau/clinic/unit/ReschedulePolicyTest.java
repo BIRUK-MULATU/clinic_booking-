@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.EnumSource.Mode.EXCLUDE;
 
 /**
- * Rule I (hospital-expansion) - moving an appointment to a new slot,
+ * Rule K (hospital-expansion) - moving an appointment to a new slot,
  * evaluated as a decision table over C1 (state is REQUESTED or
  * CONFIRMED), C2 (new slot free), C3 (>= 2h notice on the new slot), in
  * that priority order, plus boundary value analysis on the 2-hour

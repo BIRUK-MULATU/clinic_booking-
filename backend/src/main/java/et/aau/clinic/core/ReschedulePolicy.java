@@ -7,7 +7,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 
 /**
- * Rule I (hospital-expansion): moving an appointment to a different
+ * Rule K (hospital-expansion): moving an appointment to a different
  * slot, evaluated as a decision table over three conditions in strict
  * priority order - the same shape as BookingPolicy (Rule 2).
  *

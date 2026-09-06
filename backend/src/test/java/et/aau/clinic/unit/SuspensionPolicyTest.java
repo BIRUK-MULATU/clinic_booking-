@@ -10,7 +10,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Rule H (hospital-expansion) - the "three strikes" no-show suspension.
+ * Rule J (hospital-expansion) - the "three strikes" no-show suspension.
  * Two independent boundary value targets:
  *
  *   Count boundary (threshold = 3): 2 recent no-shows is clear, 3 is

@@ -54,7 +54,7 @@ public class Patient {
 
     /**
      * Insurance coverage as a whole-number percentage of the consultation
-     * fee (hospital-expansion Rule G). Defaults to 0 - a patient with no
+     * fee (hospital-expansion Rule I). Defaults to 0 - a patient with no
      * insurance pays the full fee. CoverageCalculator rejects anything
      * outside 0-100.
      */

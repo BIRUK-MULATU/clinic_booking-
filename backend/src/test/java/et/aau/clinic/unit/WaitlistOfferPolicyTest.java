@@ -8,11 +8,11 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Rule J (hospital-expansion) - a promoted waitlist offer expires 2
+ * Rule L (hospital-expansion) - a promoted waitlist offer expires 2
  * hours after it was made. A single guard condition, tested with
  * boundary value analysis on the 2-hour window: 1h59m after the offer
  * is still live, exactly 2h00m has expired (the window is inclusive at
- * the boundary, like Rule F's reminder), 2h01m has expired.
+ * the boundary, like Rule H's reminder), 2h01m has expired.
  */
 class WaitlistOfferPolicyTest {
 

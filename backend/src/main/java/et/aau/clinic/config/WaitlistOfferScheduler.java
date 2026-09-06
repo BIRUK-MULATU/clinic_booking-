@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Hospital-expansion Rule J: drives AppointmentService.expireStaleWaitlistOffers()
+ * Hospital-expansion Rule L: drives AppointmentService.expireStaleWaitlistOffers()
  * on a fixed schedule. The logic lives in the service and in
  * WaitlistOfferPolicy (both unit-tested); this class is just the timer,
  * excluded from coverage with the rest of config/.

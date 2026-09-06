@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Rule G (hospital-expansion): insurance coverage. A patient carries a
+ * Rule I (hospital-expansion): insurance coverage. A patient carries a
  * coverage percentage; the clinic bills them the remainder of the
  * consultation fee after that percentage is waived.
  *

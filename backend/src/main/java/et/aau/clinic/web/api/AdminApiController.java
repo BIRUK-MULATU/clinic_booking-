@@ -39,7 +39,7 @@ import java.time.LocalDate;
  *   GET  /api/admin/appointments/reminders       - CONFIRMED
  *        appointments in the next 24h: the "reminders due" list.
  *   POST /api/admin/appointments/{id}/reminder   - send that one
- *        appointment's 24-hour reminder now (Rule F).
+ *        appointment's 24-hour reminder now (Rule H).
  *   POST /api/admin/appointments/reminders/send-all - run the whole
  *        due-reminder sweep on demand.
  *

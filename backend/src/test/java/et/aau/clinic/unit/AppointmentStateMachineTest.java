@@ -33,9 +33,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Rule 3 - state transition testing over the 7 states x 7 events grid
  * (49 pairs: 10 valid, 39 invalid). The grid has grown by extension
- * three times: Phase C added WAITLISTED + PROMOTE, Rule I added
+ * three times: Phase C added WAITLISTED + PROMOTE, Rule K added
  * RESCHEDULE (a state-keeping self-loop from REQUESTED and CONFIRMED),
- * and Rule J added the terminal OFFER_EXPIRED state + EXPIRE_OFFER
+ * and Rule L added the terminal OFFER_EXPIRED state + EXPIRE_OFFER
  * (REQUESTED to OFFER_EXPIRED). Also covers Rule 3b's late-cancellation
  * fee, a guard condition tested with its own BVA on the 24-hour mark.
  */
@@ -87,20 +87,20 @@ class AppointmentStateMachineTest {
         assertThat(AppointmentStateMachine.transition(WAITLISTED, CANCEL)).isEqualTo(CANCELLED);
     }
 
-    // TC-S11 - Rule I, state transition table: REQUESTED --reschedule--> REQUESTED (valid) -
+    // TC-S11 - Rule K, state transition table: REQUESTED --reschedule--> REQUESTED (valid) -
     // a slot move keeps the appointment in its current state.
     @Test
     void transition_requestedReschedule_staysRequested() {
         assertThat(AppointmentStateMachine.transition(REQUESTED, RESCHEDULE)).isEqualTo(REQUESTED);
     }
 
-    // TC-S12 - Rule I, state transition table: CONFIRMED --reschedule--> CONFIRMED (valid).
+    // TC-S12 - Rule K, state transition table: CONFIRMED --reschedule--> CONFIRMED (valid).
     @Test
     void transition_confirmedReschedule_staysConfirmed() {
         assertThat(AppointmentStateMachine.transition(CONFIRMED, RESCHEDULE)).isEqualTo(CONFIRMED);
     }
 
-    // TC-S13 - Rule J, state transition table: REQUESTED --expireOffer--> OFFER_EXPIRED (valid) -
+    // TC-S13 - Rule L, state transition table: REQUESTED --expireOffer--> OFFER_EXPIRED (valid) -
     // a promoted waitlist offer the patient did not confirm within 2 hours.
     @Test
     void transition_requestedExpireOffer_movesToOfferExpired() {
@@ -120,7 +120,7 @@ class AppointmentStateMachineTest {
      * State transition table: data source for the 39 invalid pairs above.
      * All 49 state/event pairs (7 states x 7 events) minus the 10 valid
      * ones - 5 from CLAUDE.md's original table, 2 from Phase C, 2 from
-     * Rule I (RESCHEDULE) and 1 from Rule J (EXPIRE_OFFER) - generated
+     * Rule K (RESCHEDULE) and 1 from Rule L (EXPIRE_OFFER) - generated
      * rather than hand-listed so the count (39) is enforced by the grid
      * itself, not by hand-copying.
      */

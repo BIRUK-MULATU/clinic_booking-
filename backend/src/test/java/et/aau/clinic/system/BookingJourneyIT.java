@@ -123,7 +123,7 @@ class BookingJourneyIT {
         assertThat(myAppointmentsPage.getStatus(appointmentId)).isEqualTo("CANCELLED");
     }
 
-    // Rule G - the insured patient sees their reduced "you pay" amount on the confirmation page.
+    // Rule I - the insured patient sees their reduced "you pay" amount on the confirmation page.
     @Test
     void insuredPatient_seesNetPayableOnConfirmation() {
         Patient insured = new Patient(
@@ -141,7 +141,7 @@ class BookingJourneyIT {
         assertThat(confirmation.getNetPayable()).isEqualTo("150.00"); // 250 - 40%
     }
 
-    // Rule H - a patient with 3 no-shows in the last 90 days is blocked from booking online.
+    // Rule J - a patient with 3 no-shows in the last 90 days is blocked from booking online.
     @Test
     void patientSuspendedForNoShows_isBlockedOnTheBookingPage() {
         Patient suspended = patientRepository.save(new Patient(
@@ -161,7 +161,7 @@ class BookingJourneyIT {
         assertThat(bookingPage.getErrorMessage()).isEqualTo("SUSPENDED_NO_SHOWS");
     }
 
-    // Rule I - the patient moves an appointment to a different slot from the my-appointments page.
+    // Rule K - the patient moves an appointment to a different slot from the my-appointments page.
     @Test
     void patientReschedulesAnAppointmentToADifferentSlot() {
         patientRepository.save(new Patient(

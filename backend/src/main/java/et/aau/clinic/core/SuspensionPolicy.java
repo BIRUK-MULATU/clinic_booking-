@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Rule H (hospital-expansion): the "three strikes" no-show suspension.
+ * Rule J (hospital-expansion): the "three strikes" no-show suspension.
  * A patient who fails to show up for 3 or more appointments within a
  * trailing 90-day window may not book themselves in until enough of
  * those no-shows age out of the window. Reception can still book them

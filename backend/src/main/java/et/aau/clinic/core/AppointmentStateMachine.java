@@ -23,9 +23,9 @@ import static et.aau.clinic.domain.AppointmentStatus.WAITLISTED;
  * original REQUESTED/CONFIRMED blocks below are unchanged from the
  * original 5-state, 4-event design:
  *   - Phase C added WAITLISTED and PROMOTE.
- *   - Rule I added RESCHEDULE: a slot move that keeps the appointment in
+ *   - Rule K added RESCHEDULE: a slot move that keeps the appointment in
  *     its current state, so REQUESTED and CONFIRMED each get a self-loop.
- *   - Rule J added OFFER_EXPIRED (a terminal state) and EXPIRE_OFFER: a
+ *   - Rule L added OFFER_EXPIRED (a terminal state) and EXPIRE_OFFER: a
  *     promoted waitlist offer that the patient did not accept in the
  *     2-hour window lapses from REQUESTED to OFFER_EXPIRED.
  * REQUESTED and WAITLISTED are entered by construction, not by

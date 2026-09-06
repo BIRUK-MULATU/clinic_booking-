@@ -20,7 +20,7 @@ public class ConfirmationPage extends AbstractPage {
         return find("confirmation-fee-amount").getText();
     }
 
-    /** Rule G: what the patient actually pays after insurance, shown on the confirmation page. */
+    /** Rule I: what the patient actually pays after insurance, shown on the confirmation page. */
     public String getNetPayable() {
         return find("confirmation-net-payable").getText();
     }

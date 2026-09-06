@@ -165,7 +165,7 @@ class AppointmentServiceIT {
 
         Appointment persisted = appointmentRepository.findById(outcome.appointment().getId()).orElseThrow();
         assertThat(persisted.getFeeAmount()).isEqualByComparingTo("250");     // Rule 1, unchanged
-        assertThat(persisted.getNetPayable()).isEqualByComparingTo("100.00"); // Rule G: 250 - 60%
+        assertThat(persisted.getNetPayable()).isEqualByComparingTo("100.00"); // Rule I: 250 - 60%
     }
 
     @Test

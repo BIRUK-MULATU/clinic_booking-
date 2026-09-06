@@ -7,7 +7,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 
 /**
- * Rule F (hospital-expansion): whether a reminder should be sent to the
+ * Rule H (hospital-expansion): whether a reminder should be sent to the
  * patient now, evaluated as a decision table over four conditions in
  * strict priority order - the same shape as BookingPolicy (Rule 2) and
  * VisitRecordPolicy (Rule E).

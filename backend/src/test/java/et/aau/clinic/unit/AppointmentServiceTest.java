@@ -290,7 +290,7 @@ class AppointmentServiceTest {
         assertThat(available).containsExactly(future);
     }
 
-    // --- Rule F: the 24-hour reminder sweep -------------------------------------------------
+    // --- Rule H: the 24-hour reminder sweep -------------------------------------------------
     // ReminderPolicy's own boundaries are covered in ReminderPolicyTest; these check that the
     // service pulls the right rows, sends via the seam, and stamps reminderSentAt so it never
     // double-sends. The Clock stub fixes "now" so "within 24h" is exact.
@@ -348,7 +348,7 @@ class AppointmentServiceTest {
         verify(notificationService, never()).sendReminder(eq(later), any());
     }
 
-    // Rule H: a patient with 3+ recent no-shows is barred from self-booking, but reception can
+    // Rule J: a patient with 3+ recent no-shows is barred from self-booking, but reception can
     // still book them in.
     @Test
     void requestBooking_patientSuspendedForThreeNoShows_rejectsWithSuspendedReasonAndSavesNothing() {
@@ -403,7 +403,7 @@ class AppointmentServiceTest {
         verify(appointmentRepository, never()).findByPatientAndStatus(any(), any());
     }
 
-    // Rule I: reschedule moves the slot, keeps the state, and reprices from the patient's age today.
+    // Rule K: reschedule moves the slot, keeps the state, and reprices from the patient's age today.
     @Test
     void reschedule_requestedAppointment_toAFreeSlot_movesSlotAndKeepsRequestedState() {
         Patient patient = adultPatient();
@@ -466,7 +466,7 @@ class AppointmentServiceTest {
         verify(appointmentRepository, never()).save(any());
     }
 
-    // Rule J: the waitlist-offer expiry sweep - an expired offer lapses to OFFER_EXPIRED and the
+    // Rule L: the waitlist-offer expiry sweep - an expired offer lapses to OFFER_EXPIRED and the
     // slot is offered to the next person on the waitlist.
     @Test
     void expireStaleWaitlistOffers_offerOlderThanTwoHours_lapsesToOfferExpiredAndPromotesNext() {
@@ -512,7 +512,7 @@ class AppointmentServiceTest {
                 FeeCategory.ADULT, new BigDecimal("250"), slotStart.minusDays(1));
     }
 
-    // Rule G: the net payable after insurance is captured on the appointment at booking time.
+    // Rule I: the net payable after insurance is captured on the appointment at booking time.
     @Test
     void requestBooking_patientWith40PercentCoverage_capturesNetPayableOnTheAppointment() {
         Patient patient = adultPatient();

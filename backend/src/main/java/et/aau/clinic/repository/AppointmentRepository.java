@@ -18,13 +18,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByPatientOrderByRequestedAtDesc(Patient patient);
 
-    // Rule H: a patient's past no-shows, used to count the recent ones for the suspension check.
+    // Rule J: a patient's past no-shows, used to count the recent ones for the suspension check.
     List<Appointment> findByPatientAndStatus(Patient patient, AppointmentStatus status);
 
     // "Next" waitlisted patient for a slot, FIFO by requestedAt - used to promote on cancellation.
     Optional<Appointment> findFirstBySlotAndStatusOrderByRequestedAtAsc(Slot slot, AppointmentStatus status);
 
-    // Rule J: outstanding waitlist offers - REQUESTED appointments promoted off the waitlist
+    // Rule L: outstanding waitlist offers - REQUESTED appointments promoted off the waitlist
     // (waitlistOfferedAt set) that the patient has not yet confirmed. The 2-hour expiry check
     // is WaitlistOfferPolicy's job, per row against the Clock.
     List<Appointment> findByStatusAndWaitlistOfferedAtIsNotNull(AppointmentStatus status);
@@ -32,7 +32,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // The reception day-roster: every appointment whose slot falls within a day, earliest first.
     List<Appointment> findBySlot_StartTimeBetweenOrderBySlot_StartTimeAsc(LocalDateTime from, LocalDateTime to);
 
-    // Reminder candidates (Rule F): CONFIRMED and not yet reminded. The 24-hour-window and
+    // Reminder candidates (Rule H): CONFIRMED and not yet reminded. The 24-hour-window and
     // slot-not-started conditions are ReminderPolicy's job, evaluated per row against the Clock.
     List<Appointment> findByStatusAndReminderSentAtIsNull(AppointmentStatus status);
 

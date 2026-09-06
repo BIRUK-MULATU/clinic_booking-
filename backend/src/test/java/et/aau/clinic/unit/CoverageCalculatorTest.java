@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Rule G (hospital-expansion) - insurance coverage. Equivalence
+ * Rule I (hospital-expansion) - insurance coverage. Equivalence
  * partitioning on the coverage percentage (invalid-low &lt; 0, valid
  * 0-100, invalid-high &gt; 100) and boundary value analysis on the
  * closed valid range [0, 100]: the six values -1, 0, 1, 99, 100, 101.

@@ -49,7 +49,7 @@ public class Appointment {
     private BigDecimal cancellationFee;
 
     /**
-     * When the 24-hour reminder was sent (hospital-expansion Rule F).
+     * When the 24-hour reminder was sent (hospital-expansion Rule H).
      * Stays null until ReminderPolicy fires; its non-null-ness is also
      * condition C2 ("not already reminded"), so the scheduled job never
      * sends twice.
@@ -58,7 +58,7 @@ public class Appointment {
 
     /**
      * What the patient actually pays after their insurance coverage is
-     * applied to feeAmount (hospital-expansion Rule G). Captured at
+     * applied to feeAmount (hospital-expansion Rule I). Captured at
      * booking time like feeAmount, so a later change to the patient's
      * coverage never rewrites an existing bill. Equals feeAmount when
      * the patient has no coverage.
@@ -67,7 +67,7 @@ public class Appointment {
 
     /**
      * When this appointment was promoted off the waitlist (hospital-
-     * expansion Rule J). Stays null unless it came through PROMOTE;
+     * expansion Rule L). Stays null unless it came through PROMOTE;
      * WaitlistOfferPolicy measures the 2-hour acceptance window from
      * here, and expireStaleWaitlistOffers() lapses the offer once it
      * passes.
@@ -100,7 +100,7 @@ public class Appointment {
         return slot;
     }
 
-    /** Rule I: a reschedule moves the appointment to a different slot, keeping its state. */
+    /** Rule K: a reschedule moves the appointment to a different slot, keeping its state. */
     public void setSlot(Slot slot) {
         this.slot = slot;
     }
@@ -122,7 +122,7 @@ public class Appointment {
     }
 
     /**
-     * Rule I: a reschedule recomputes the fee from the patient's age on the
+     * Rule K: a reschedule recomputes the fee from the patient's age on the
      * reschedule date, so a child who has since turned 18 is repriced to the
      * adult band (and net payable with them).
      */

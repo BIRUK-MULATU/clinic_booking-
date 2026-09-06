@@ -109,7 +109,7 @@ public class AppointmentService {
         Slot slot = slotRepository.findByIdForUpdate(slotId).orElseThrow();
         LocalDateTime now = LocalDateTime.now(clock);
 
-        // Rule H (highest-priority gate): a patient with 3+ recent no-shows cannot self-book,
+        // Rule J (highest-priority gate): a patient with 3+ recent no-shows cannot self-book,
         // regardless of the slot, their balance or the notice given. Reception's bookForPatient()
         // deliberately skips this, exactly as it skips C2/C3.
         if (suspensionFor(patient, now).isSuspended()) {
@@ -172,7 +172,7 @@ public class AppointmentService {
     }
 
     /**
-     * Rule H: the patient's current no-show suspension status. Exposed so the UI can warn
+     * Rule J: the patient's current no-show suspension status. Exposed so the UI can warn
      * a patient ("2 of 3 no-shows") before they even pick a slot.
      */
     public SuspensionDecision suspensionFor(Long patientId) {
@@ -190,7 +190,7 @@ public class AppointmentService {
 
     /**
      * Builds a fresh appointment with its fee (Rule 1) and net payable after insurance
-     * (Rule G) both captured now, so neither a later birthday nor a later change to the
+     * (Rule I) both captured now, so neither a later birthday nor a later change to the
      * patient's coverage rewrites this row. Shared by every creation path.
      */
     private Appointment newAppointment(Patient patient, Slot slot, AppointmentStatus status, LocalDateTime now) {
@@ -202,7 +202,7 @@ public class AppointmentService {
     }
 
     /**
-     * Hospital-expansion Rule F: the scheduled job's entry point. Pulls every
+     * Hospital-expansion Rule H: the scheduled job's entry point. Pulls every
      * CONFIRMED appointment that has not been reminded yet, asks ReminderPolicy
      * (against the injected Clock) which ones are now within the 24-hour window,
      * and for each of those sends one reminder SMS and stamps reminderSentAt so
@@ -222,7 +222,7 @@ public class AppointmentService {
     }
 
     /**
-     * Hospital-expansion Rule F: reception presses "send reminder" next to one
+     * Hospital-expansion Rule H: reception presses "send reminder" next to one
      * appointment. Runs exactly the same ReminderPolicy check as the scheduled
      * sweep - so a slot still more than 24h away, or one already reminded, comes
      * back with that skip reason rather than sending - and returns the decision so
@@ -294,7 +294,7 @@ public class AppointmentService {
     }
 
     /**
-     * Hospital-expansion Rule I: move an appointment to a different slot. ReschedulePolicy
+     * Hospital-expansion Rule K: move an appointment to a different slot. ReschedulePolicy
      * gates it (state reschedulable, new slot free, 2h notice on the new time); on success
      * the appointment keeps its state (RESCHEDULE is a self-loop), takes the new slot, and
      * is repriced from the patient's age today - so a child who has since turned 18 moves
@@ -330,7 +330,7 @@ public class AppointmentService {
     }
 
     /**
-     * Hospital-expansion Rule J: the scheduled sweep. A waitlist offer (a REQUESTED
+     * Hospital-expansion Rule L: the scheduled sweep. A waitlist offer (a REQUESTED
      * appointment promoted off the waitlist, stamped with waitlistOfferedAt) that the
      * patient has not confirmed within 2 hours lapses to OFFER_EXPIRED, and the slot is
      * offered to the next person on that slot's waitlist. Returns how many lapsed.
@@ -355,7 +355,7 @@ public class AppointmentService {
      * Hospital-expansion Phase C, now wired: when a CONFIRMED appointment is cancelled or
      * rescheduled away, the slot it held frees up, so the longest-waiting WAITLISTED
      * appointment for that same slot (if any) is promoted to REQUESTED. The promotion time
-     * is stamped on it (Rule J) so an unconfirmed offer can later be expired.
+     * is stamped on it (Rule L) so an unconfirmed offer can later be expired.
      */
     private void promoteNextWaitlisted(Slot slot, LocalDateTime now) {
         appointmentRepository.findFirstBySlotAndStatusOrderByRequestedAtAsc(slot, AppointmentStatus.WAITLISTED)

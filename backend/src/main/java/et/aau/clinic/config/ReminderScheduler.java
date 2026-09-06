@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Hospital-expansion Rule F: drives AppointmentService.sendDueReminders()
+ * Hospital-expansion Rule H: drives AppointmentService.sendDueReminders()
  * on a fixed schedule. All the logic lives in the service and in
  * ReminderPolicy (which the unit tests cover); this class is just the
  * timer, so it is excluded from coverage along with the rest of config/.

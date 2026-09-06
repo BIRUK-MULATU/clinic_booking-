@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.EnumSource.Mode.EXCLUDE;
 
 /**
- * Rule F (hospital-expansion) - decision table over C1 (status
+ * Rule H (hospital-expansion) - decision table over C1 (status
  * CONFIRMED), C2 (not already reminded), C3 (slot not started), C4
  * (slot within 24h), evaluated in that priority order, plus boundary
  * value analysis on the 24-hour reminder window.

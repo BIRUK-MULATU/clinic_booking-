@@ -9,6 +9,6 @@ public enum RejectionReason {
     SLOT_UNAVAILABLE,
     OUTSTANDING_BALANCE,
     INSUFFICIENT_NOTICE,
-    // Hospital-expansion Rule H: 3+ no-shows in the trailing 90 days bar self-service booking.
+    // Hospital-expansion Rule J: 3+ no-shows in the trailing 90 days bar self-service booking.
     SUSPENDED_NO_SHOWS
 }

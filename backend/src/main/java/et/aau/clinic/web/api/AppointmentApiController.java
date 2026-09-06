@@ -63,7 +63,7 @@ public class AppointmentApiController {
         return ResponseEntity.ok(AppointmentResponse.from(appointmentService.cancel(id)));
     }
 
-    // Rule I: move an appointment to a different slot. A rejection comes back as
+    // Rule K: move an appointment to a different slot. A rejection comes back as
     // approved=false with the ReschedulePolicy reason, the same shape /api/bookings uses.
     @PostMapping("/api/appointments/{id}/reschedule")
     public ResponseEntity<?> reschedule(@PathVariable Long id, @RequestBody BookingRequest request,

@@ -40,8 +40,8 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
  *   slot free   : FREE | TAKEN                    (Rule 2 C1)
  *   balance     : CLEAR | OWING                   (Rule 2 C2)
  *   notice      : ENOUGH (>= 2h) | SHORT          (Rule 2 C3)
- *   suspension  : CLEAR | SUSPENDED (3 no-shows)  (Rule H, checked first)
- *   coverage    : 0% | 50% | 100%                 (Rule G, sets net payable)
+ *   suspension  : CLEAR | SUSPENDED (3 no-shows)  (Rule J, checked first)
+ *   coverage    : 0% | 50% | 100%                 (Rule I, sets net payable)
  *
  * Full Cartesian product = 3 x 2 x 2 x 2 x 2 x 3 = 144 combinations. The
  * table below is a 10-row covering array (generated greedily) in which
@@ -53,8 +53,8 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
  * actually-reported reason, not just as a factor value that a
  * higher-priority condition masks.
  *
- * Expected outcome per row follows the priority order Rule H -> C1 -> C2
- * -> C3; on approval the fee is Rule 1's and net payable is Rule G's.
+ * Expected outcome per row follows the priority order Rule J -> C1 -> C2
+ * -> C3; on approval the fee is Rule 1's and net payable is Rule I's.
  *
  * Real data, real H2, fixed Clock - the same wiring as AppointmentServiceIT.
  */

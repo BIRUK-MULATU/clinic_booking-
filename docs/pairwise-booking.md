@@ -12,8 +12,8 @@ Technique: **combinatorial / pairwise testing**, applied to
 | slot free | FREE, TAKEN | Rule 2 C1 |
 | balance | CLEAR, OWING | Rule 2 C2 |
 | notice | ENOUGH (≥ 2h), SHORT | Rule 2 C3 |
-| suspension | CLEAR, SUSPENDED (3 no-shows in 90 days) | Rule H — checked before C1 |
-| coverage | 0%, 50%, 100% | Rule G — net payable |
+| suspension | CLEAR, SUSPENDED (3 no-shows in 90 days) | Rule J — checked before C1 |
+| coverage | 0%, 50%, 100% | Rule I — net payable |
 
 Full Cartesian product = 3 × 2 × 2 × 2 × 2 × 3 = **144** combinations.
 
@@ -35,9 +35,9 @@ Total: **11 test cases**, TC-P01 … TC-P11.
 
 ## Expected-outcome derivation
 
-Priority order: **Rule H (suspension) → C1 (slot free) → C2 (balance) →
+Priority order: **Rule J (suspension) → C1 (slot free) → C2 (balance) →
 C3 (notice) → approve**. On approval the fee is Rule 1's for the age band
-and the net payable is Rule G's: `fee − fee × coverage% ÷ 100`, half-up
+and the net payable is Rule I's: `fee − fee × coverage% ÷ 100`, half-up
 to 2 dp.
 
 | Case | age | slot | balance | notice | suspension | coverage | Expected |

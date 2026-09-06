@@ -290,7 +290,7 @@ class AdminManagementIT {
                 .andExpect(status().isBadRequest());
     }
 
-    // --- reminders (Rule F) ---
+    // --- reminders (Rule H) ---
 
     @Test
     void remindersDue_asAdmin_listsConfirmedAppointmentsWithinTheNext24h() throws Exception {
