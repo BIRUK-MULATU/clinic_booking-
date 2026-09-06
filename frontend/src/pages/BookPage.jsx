@@ -21,6 +21,7 @@ export default function BookPage() {
       .catch(() => setError("Could not reach the server."));
   }, [slotId]);
 
+  // Submit the booking request and route the patient based on the server response.
   async function handleConfirm() {
     setSubmitting(true);
     setError("");
