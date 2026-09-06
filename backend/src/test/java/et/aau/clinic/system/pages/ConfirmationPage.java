@@ -20,8 +20,14 @@ public class ConfirmationPage extends AbstractPage {
         return find("confirmation-fee-amount").getText();
     }
 
+    /** Rule G: what the patient actually pays after insurance, shown on the confirmation page. */
+    public String getNetPayable() {
+        return find("confirmation-net-payable").getText();
+    }
+
     /** The appointment id, read from the current /confirmation/{id} URL. */
     public Long getAppointmentId() {
+        find("confirmation-status"); // wait for the redirect to this page to finish before reading the URL
         String url = driver.getCurrentUrl();
         return Long.valueOf(url.substring(url.lastIndexOf('/') + 1));
     }

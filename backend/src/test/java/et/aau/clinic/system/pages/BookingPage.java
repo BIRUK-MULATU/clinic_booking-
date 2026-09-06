@@ -13,6 +13,12 @@ public class BookingPage extends AbstractPage {
         return new ConfirmationPage(driver, baseUrl);
     }
 
+    /** Submit when the booking is expected to be rejected - stays on the booking page. */
+    public BookingPage submitExpectingRejection() {
+        find("book-submit").click();
+        return this;
+    }
+
     public String getErrorMessage() {
         return find("booking-error").getText();
     }

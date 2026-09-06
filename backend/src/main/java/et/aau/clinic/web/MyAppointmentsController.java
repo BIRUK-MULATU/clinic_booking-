@@ -7,6 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class MyAppointmentsController {
@@ -21,7 +22,14 @@ public class MyAppointmentsController {
     public String myAppointments(HttpSession session, Model model) {
         Long patientId = (Long) session.getAttribute("patientId");
         model.addAttribute("appointments", appointmentService.listAppointmentsForPatient(patientId));
+        model.addAttribute("availableSlots", appointmentService.listAvailableSlots());
         return "my-appointments";
+    }
+
+    @PostMapping("/appointments/{id}/reschedule")
+    public String reschedule(@PathVariable Long id, @RequestParam Long slotId) {
+        appointmentService.reschedule(id, slotId);
+        return "redirect:/my-appointments";
     }
 
     @PostMapping("/appointments/{id}/confirm")
