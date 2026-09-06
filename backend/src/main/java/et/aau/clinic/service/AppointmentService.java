@@ -6,6 +6,7 @@ import et.aau.clinic.core.BookingDecision;
 import et.aau.clinic.core.BookingPolicy;
 import et.aau.clinic.core.Fee;
 import et.aau.clinic.core.FeeCalculator;
+import et.aau.clinic.core.ReminderDecision;
 import et.aau.clinic.core.ReminderPolicy;
 import et.aau.clinic.domain.Appointment;
 import et.aau.clinic.domain.AppointmentStatus;
@@ -179,16 +180,45 @@ public class AppointmentService {
         int sent = 0;
         for (Appointment appointment :
                 appointmentRepository.findByStatusAndReminderSentAtIsNull(AppointmentStatus.CONFIRMED)) {
-            boolean alreadyReminded = appointment.getReminderSentAt() != null;
-            if (ReminderPolicy.decide(appointment.getStatus(), now,
-                    appointment.getSlot().getStartTime(), alreadyReminded).isDue()) {
-                notificationService.sendReminder(appointment.getPatient(), appointment);
-                appointment.setReminderSentAt(now);
-                appointmentRepository.save(appointment);
+            if (attemptReminder(appointment, now).isDue()) {
                 sent++;
             }
         }
         return sent;
+    }
+
+    /**
+     * Hospital-expansion Rule F: reception presses "send reminder" next to one
+     * appointment. Runs exactly the same ReminderPolicy check as the scheduled
+     * sweep - so a slot still more than 24h away, or one already reminded, comes
+     * back with that skip reason rather than sending - and returns the decision so
+     * the admin UI can show either "sent" or why not.
+     */
+    public ReminderDecision remind(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId).orElseThrow();
+        return attemptReminder(appointment, LocalDateTime.now(clock));
+    }
+
+    /**
+     * The CONFIRMED appointments whose slot is within the next 24 hours - reception's
+     * "reminders due" list. Ordered soonest-first; already-reminded ones stay in the
+     * list (their reminderSentAt is non-null) so the admin can see they are done.
+     */
+    public List<Appointment> listUpcomingReminders() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        return appointmentRepository.findByStatusAndSlot_StartTimeBetweenOrderBySlot_StartTimeAsc(
+                AppointmentStatus.CONFIRMED, now, now.plusHours(24));
+    }
+
+    private ReminderDecision attemptReminder(Appointment appointment, LocalDateTime now) {
+        ReminderDecision decision = ReminderPolicy.decide(appointment.getStatus(), now,
+                appointment.getSlot().getStartTime(), appointment.getReminderSentAt() != null);
+        if (decision.isDue()) {
+            notificationService.sendReminder(appointment.getPatient(), appointment);
+            appointment.setReminderSentAt(now);
+            appointmentRepository.save(appointment);
+        }
+        return decision;
     }
 
     public Appointment confirm(Long appointmentId) {

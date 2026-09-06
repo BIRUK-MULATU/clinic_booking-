@@ -290,6 +290,93 @@ class AdminManagementIT {
                 .andExpect(status().isBadRequest());
     }
 
+    // --- reminders (Rule F) ---
+
+    @Test
+    void remindersDue_asAdmin_listsConfirmedAppointmentsWithinTheNext24h() throws Exception {
+        MockHttpSession admin = login("rem-admin1", Role.ADMIN);
+        long soonId = bookConfirmed(admin, "Soon Patient", "soonp", FIXED_NOW.plusHours(5));
+        bookConfirmed(admin, "Later Patient", "laterp", FIXED_NOW.plusDays(2)); // outside the window
+
+        mockMvc.perform(get("/api/admin/appointments/reminders").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value((int) soonId))
+                .andExpect(jsonPath("$[0].patientName").value("Soon Patient"))
+                .andExpect(jsonPath("$[0].reminderSentAt").doesNotExist());
+    }
+
+    @Test
+    void sendReminder_asAdmin_marksItSent_thenASecondSendReportsAlreadyReminded() throws Exception {
+        MockHttpSession admin = login("rem-admin2", Role.ADMIN);
+        long id = bookConfirmed(admin, "Remind Me", "remindme", FIXED_NOW.plusHours(6));
+
+        mockMvc.perform(post("/api/admin/appointments/" + id + "/reminder").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sent").value(true))
+                .andExpect(jsonPath("$.reason").doesNotExist());
+
+        mockMvc.perform(get("/api/admin/appointments/reminders").session(admin))
+                .andExpect(jsonPath("$[0].reminderSentAt").value(FIXED_NOW.toString()));
+
+        mockMvc.perform(post("/api/admin/appointments/" + id + "/reminder").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sent").value(false))
+                .andExpect(jsonPath("$.reason").value("ALREADY_REMINDED"));
+    }
+
+    @Test
+    void sendReminder_appointmentMoreThan24hAway_reportsNotYetDue() throws Exception {
+        MockHttpSession admin = login("rem-admin3", Role.ADMIN);
+        long id = bookConfirmed(admin, "Too Early", "tooearly", FIXED_NOW.plusDays(3));
+
+        mockMvc.perform(post("/api/admin/appointments/" + id + "/reminder").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sent").value(false))
+                .andExpect(jsonPath("$.reason").value("NOT_YET_DUE"));
+    }
+
+    @Test
+    void sendAllDueReminders_asAdmin_returnsHowManyWentOut() throws Exception {
+        MockHttpSession admin = login("rem-admin4", Role.ADMIN);
+        bookConfirmed(admin, "Due One", "dueone", FIXED_NOW.plusHours(3));
+        bookConfirmed(admin, "Due Two", "duetwo", FIXED_NOW.plusHours(20));
+        bookConfirmed(admin, "Not Due", "notdue", FIXED_NOW.plusDays(2));
+
+        mockMvc.perform(post("/api/admin/appointments/reminders/send-all").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sent").value(2));
+    }
+
+    @Test
+    void remindersDue_asPatient_isForbidden() throws Exception {
+        MockHttpSession patient = login("rem-patient", Role.PATIENT);
+        mockMvc.perform(get("/api/admin/appointments/reminders").session(patient))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/admin/appointments/1/reminder").session(patient))
+                .andExpect(status().isForbidden());
+    }
+
+    /** Books a patient straight to CONFIRMED on a fresh slot at the given time, returns the appointment id. */
+    private long bookConfirmed(MockHttpSession admin, String patientName, String username, LocalDateTime slotStart)
+            throws Exception {
+        Doctor doctor = seedDoctor();
+        Patient patient = patientRepository.save(
+                new Patient(patientName, LocalDate.of(1990, 1, 1), username, "secret", "0911000000"));
+        String slotResponse = mockMvc.perform(post("/api/slots").session(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"doctorId\":" + doctor.getId() + ",\"startTime\":\"" + slotStart + "\"}"))
+                .andReturn().getResponse().getContentAsString();
+        long slotId = com.jayway.jsonpath.JsonPath.parse(slotResponse).read("$.slot.id", Integer.class);
+
+        String bookResponse = mockMvc.perform(post("/api/admin/appointments").session(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":" + patient.getId() + ",\"slotId\":" + slotId + "}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return com.jayway.jsonpath.JsonPath.parse(bookResponse).read("$.appointment.id", Integer.class);
+    }
+
     private Doctor seedDoctor() {
         Department department = departmentRepository.save(new Department("Test Dept"));
         return doctorRepository.save(new Doctor("Dr. Test", "Tester", department));

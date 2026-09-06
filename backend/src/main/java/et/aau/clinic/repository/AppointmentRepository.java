@@ -28,6 +28,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     // slot-not-started conditions are ReminderPolicy's job, evaluated per row against the Clock.
     List<Appointment> findByStatusAndReminderSentAtIsNull(AppointmentStatus status);
 
+    // Reception's "reminders due" list: CONFIRMED appointments whose slot falls in a time
+    // window (now .. now+24h), soonest first. Already-reminded rows are kept in - their
+    // reminderSentAt tells the admin they are done.
+    List<Appointment> findByStatusAndSlot_StartTimeBetweenOrderBySlot_StartTimeAsc(
+            AppointmentStatus status, LocalDateTime from, LocalDateTime to);
+
     // Reception's "needs my attention" list: every appointment in one status (REQUESTED for the
     // confirm queue), across all dates, soonest slot first.
     List<Appointment> findByStatusOrderBySlot_StartTimeAsc(AppointmentStatus status);

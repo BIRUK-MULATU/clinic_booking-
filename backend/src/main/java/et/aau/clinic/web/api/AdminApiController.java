@@ -9,14 +9,19 @@ import et.aau.clinic.web.api.dto.AdminBookingRequest;
 import et.aau.clinic.web.api.dto.AppointmentResponse;
 import et.aau.clinic.web.api.dto.BookingResponse;
 import et.aau.clinic.web.api.dto.ErrorResponse;
+import et.aau.clinic.web.api.dto.ReminderResponse;
+import et.aau.clinic.web.api.dto.ReminderSendResult;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -31,6 +36,12 @@ import java.time.LocalDate;
  *        appointment whose slot falls on one date. Defaults to today.
  *   POST /api/admin/appointments          - reception books an
  *        appointment directly onto a patient (straight to CONFIRMED).
+ *   GET  /api/admin/appointments/reminders       - CONFIRMED
+ *        appointments in the next 24h: the "reminders due" list.
+ *   POST /api/admin/appointments/{id}/reminder   - send that one
+ *        appointment's 24-hour reminder now (Rule F).
+ *   POST /api/admin/appointments/reminders/send-all - run the whole
+ *        due-reminder sweep on demand.
  *
  * All separate from QueueApiController's live queue, which only covers
  * patients who have physically checked in.
@@ -95,6 +106,35 @@ public class AdminApiController {
         }
         return ResponseEntity.status(201).body(
                 new BookingResponse(true, null, AppointmentResponse.from(outcome.appointment())));
+    }
+
+    @GetMapping("/api/admin/appointments/reminders")
+    public ResponseEntity<?> remindersDue(HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        return ResponseEntity.ok(appointmentService.listUpcomingReminders().stream()
+                .map(ReminderResponse::from)
+                .toList());
+    }
+
+    @PostMapping("/api/admin/appointments/{id}/reminder")
+    public ResponseEntity<?> sendReminder(@PathVariable Long id, HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        return ResponseEntity.ok(ReminderSendResult.from(appointmentService.remind(id)));
+    }
+
+    @PostMapping("/api/admin/appointments/reminders/send-all")
+    public ResponseEntity<?> sendAllDueReminders(HttpSession session) {
+        ResponseEntity<ErrorResponse> denied = requireAdmin(session);
+        if (denied != null) {
+            return denied;
+        }
+        return ResponseEntity.ok(Map.of("sent", appointmentService.sendDueReminders()));
     }
 
     private ResponseEntity<ErrorResponse> requireAdmin(HttpSession session) {

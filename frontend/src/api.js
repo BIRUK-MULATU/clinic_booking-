@@ -80,6 +80,12 @@ export const api = {
   // Reception's confirm queue: every REQUESTED appointment, any date.
   pendingAppointments: () => request("/admin/appointments/pending"),
 
+  // Hospital-expansion Rule F: CONFIRMED appointments coming up within 24h, and the
+  // actions to text their reminder now - one at a time, or the whole due batch.
+  remindersDue: () => request("/admin/appointments/reminders"),
+  sendReminder: (id) => request(`/admin/appointments/${id}/reminder`, { method: "POST" }),
+  sendAllReminders: () => request("/admin/appointments/reminders/send-all", { method: "POST" }),
+
   // Hospital-expansion Phase E: the visit record for one appointment. The GET 404s
   // when nothing has been recorded yet, which is a normal state, not an error - so
   // it is caught here and returned as ok:false rather than thrown.
@@ -98,6 +104,14 @@ export const REJECTION_MESSAGES = {
   SLOT_UNAVAILABLE: "That slot has just been taken. Please pick another one.",
   OUTSTANDING_BALANCE: "You have an outstanding balance and cannot book until it is settled.",
   INSUFFICIENT_NOTICE: "Bookings need at least 2 hours' notice before the slot time.",
+};
+
+// Hospital-expansion Rule F: why ReminderPolicy did not send a reminder.
+export const REMINDER_SKIP_MESSAGES = {
+  NOT_CONFIRMED: "Only confirmed appointments get a reminder.",
+  ALREADY_REMINDED: "A reminder has already been sent for this appointment.",
+  SLOT_ALREADY_STARTED: "This appointment's time has already passed.",
+  NOT_YET_DUE: "This appointment is more than 24 hours away — too early to remind.",
 };
 
 // Hospital-expansion Phase E: why VisitRecordPolicy refused to record a visit.

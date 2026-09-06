@@ -348,6 +348,38 @@ class AppointmentServiceTest {
         verify(notificationService, never()).sendReminder(eq(later), any());
     }
 
+    @Test
+    void remind_confirmedAppointmentWithinWindow_sendsAndReportsDue() {
+        Patient patient = adultPatient();
+        Slot slot = new Slot(FIXED_NOW.plusHours(4));
+        Appointment appointment = new Appointment(
+                patient, slot, AppointmentStatus.CONFIRMED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        when(appointmentRepository.findById(9L)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var decision = service.remind(9L);
+
+        assertThat(decision.isDue()).isTrue();
+        verify(notificationService).sendReminder(patient, appointment);
+        assertThat(appointment.getReminderSentAt()).isEqualTo(FIXED_NOW);
+    }
+
+    @Test
+    void remind_appointmentAlreadyReminded_sendsNothingAndReportsTheReason() {
+        Patient patient = adultPatient();
+        Appointment appointment = new Appointment(patient, new Slot(FIXED_NOW.plusHours(4)),
+                AppointmentStatus.CONFIRMED, FeeCategory.ADULT, new BigDecimal("250"), FIXED_NOW);
+        appointment.setReminderSentAt(FIXED_NOW.minusHours(1));
+        when(appointmentRepository.findById(9L)).thenReturn(Optional.of(appointment));
+
+        var decision = service.remind(9L);
+
+        assertThat(decision.isDue()).isFalse();
+        assertThat(decision.getReason()).isEqualTo(et.aau.clinic.domain.ReminderSkipReason.ALREADY_REMINDED);
+        verify(notificationService, never()).sendReminder(any(), any());
+        verify(appointmentRepository, never()).save(any());
+    }
+
     private Patient adultPatient() {
         return new Patient("Abebe Kebede", LocalDate.of(1990, 5, 1), "abebe", "secret", "0911000000");
     }

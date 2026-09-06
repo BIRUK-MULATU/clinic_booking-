@@ -12,6 +12,7 @@ import QueuePage from "./pages/QueuePage";
 import VisitRecordPage from "./pages/VisitRecordPage";
 import PatientsPage from "./pages/PatientsPage";
 import ManageSlotsPage from "./pages/ManageSlotsPage";
+import RemindersPage from "./pages/RemindersPage";
 import Watermark from "./components/Watermark";
 import { useAuth } from "./context/AuthContext";
 
@@ -107,6 +108,14 @@ export default function App() {
           element={
             <ProtectedRoute role="ADMIN">
               <ManageSlotsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reminders"
+          element={
+            <ProtectedRoute role="ADMIN">
+              <RemindersPage />
             </ProtectedRoute>
           }
         />

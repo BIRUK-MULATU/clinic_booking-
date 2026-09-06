@@ -29,6 +29,9 @@ export default function TopBar() {
               <NavLink to="/manage-slots" className={({ isActive }) => (isActive ? "active" : "")}>
                 Slots
               </NavLink>
+              <NavLink to="/reminders" className={({ isActive }) => (isActive ? "active" : "")}>
+                Reminders
+              </NavLink>
               <NavLink to="/patients" className={({ isActive }) => (isActive ? "active" : "")}>
                 Patients
               </NavLink>
