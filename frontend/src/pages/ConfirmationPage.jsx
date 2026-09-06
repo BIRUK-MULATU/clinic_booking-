@@ -59,6 +59,14 @@ export default function ConfirmationPage() {
               {formatMoney(appointment.feeAmount)}
             </span>
           </div>
+          {appointment.netPayable != null && appointment.netPayable !== appointment.feeAmount && (
+            <div className="summary-row">
+              <span className="label">You pay (after insurance)</span>
+              <span className="fee-amount" id="confirmation-net-payable">
+                {formatMoney(appointment.netPayable)}
+              </span>
+            </div>
+          )}
         </div>
       )}
 

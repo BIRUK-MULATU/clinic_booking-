@@ -8,14 +8,28 @@ import java.time.LocalDateTime;
 
 import static et.aau.clinic.domain.AppointmentStatus.CANCELLED;
 import static et.aau.clinic.domain.AppointmentStatus.CONFIRMED;
+import static et.aau.clinic.domain.AppointmentStatus.OFFER_EXPIRED;
 import static et.aau.clinic.domain.AppointmentStatus.REQUESTED;
+import static et.aau.clinic.domain.AppointmentStatus.WAITLISTED;
 
 /**
- * Rule 3: the appointment lifecycle. transition() implements the 5x4
- * table directly - REQUESTED and CONFIRMED are the only non-terminal
- * states, so those are the only two cases with any outgoing arrow;
- * everything else, including every event on the three terminal states,
- * falls through to the same "invalid" rejection.
+ * Rule 3: the appointment lifecycle. transition() implements the 7x7
+ * table directly - REQUESTED, CONFIRMED and WAITLISTED are the only
+ * non-terminal states, so those are the only cases with any outgoing
+ * arrow; everything else, including every event on the four terminal
+ * states, falls through to the same "invalid" rejection.
+ *
+ * The table has grown twice by extension, never by rewrite - the
+ * original REQUESTED/CONFIRMED blocks below are unchanged from the
+ * original 5-state, 4-event design:
+ *   - Phase C added WAITLISTED and PROMOTE.
+ *   - Rule I added RESCHEDULE: a slot move that keeps the appointment in
+ *     its current state, so REQUESTED and CONFIRMED each get a self-loop.
+ *   - Rule J added OFFER_EXPIRED (a terminal state) and EXPIRE_OFFER: a
+ *     promoted waitlist offer that the patient did not accept in the
+ *     2-hour window lapses from REQUESTED to OFFER_EXPIRED.
+ * REQUESTED and WAITLISTED are entered by construction, not by
+ * transition (a fresh booking, or one made when the slot was taken).
  */
 public final class AppointmentStateMachine {
 
@@ -33,6 +47,12 @@ public final class AppointmentStateMachine {
             if (event == AppointmentEvent.CANCEL) {
                 return CANCELLED;
             }
+            if (event == AppointmentEvent.RESCHEDULE) {
+                return REQUESTED;
+            }
+            if (event == AppointmentEvent.EXPIRE_OFFER) {
+                return OFFER_EXPIRED;
+            }
         }
         if (current == CONFIRMED) {
             if (event == AppointmentEvent.ATTEND) {
@@ -43,6 +63,17 @@ public final class AppointmentStateMachine {
             }
             if (event == AppointmentEvent.MARK_NO_SHOW) {
                 return AppointmentStatus.NO_SHOW;
+            }
+            if (event == AppointmentEvent.RESCHEDULE) {
+                return CONFIRMED;
+            }
+        }
+        if (current == WAITLISTED) {
+            if (event == AppointmentEvent.PROMOTE) {
+                return REQUESTED;
+            }
+            if (event == AppointmentEvent.CANCEL) {
+                return CANCELLED;
             }
         }
         throw new IllegalStateException(

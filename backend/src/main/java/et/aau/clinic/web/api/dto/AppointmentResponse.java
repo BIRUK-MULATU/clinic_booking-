@@ -11,6 +11,7 @@ public record AppointmentResponse(
         String status,
         String feeCategory,
         BigDecimal feeAmount,
+        BigDecimal netPayable,
         BigDecimal cancellationFee) {
 
     public static AppointmentResponse from(Appointment appointment) {
@@ -21,6 +22,7 @@ public record AppointmentResponse(
                 appointment.getStatus().name(),
                 appointment.getFeeCategory().name(),
                 appointment.getFeeAmount(),
+                appointment.getNetPayable(),
                 appointment.getCancellationFee());
     }
 }

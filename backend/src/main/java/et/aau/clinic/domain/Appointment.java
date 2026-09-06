@@ -48,6 +48,32 @@ public class Appointment {
 
     private BigDecimal cancellationFee;
 
+    /**
+     * When the 24-hour reminder was sent (hospital-expansion Rule F).
+     * Stays null until ReminderPolicy fires; its non-null-ness is also
+     * condition C2 ("not already reminded"), so the scheduled job never
+     * sends twice.
+     */
+    private LocalDateTime reminderSentAt;
+
+    /**
+     * What the patient actually pays after their insurance coverage is
+     * applied to feeAmount (hospital-expansion Rule G). Captured at
+     * booking time like feeAmount, so a later change to the patient's
+     * coverage never rewrites an existing bill. Equals feeAmount when
+     * the patient has no coverage.
+     */
+    private BigDecimal netPayable;
+
+    /**
+     * When this appointment was promoted off the waitlist (hospital-
+     * expansion Rule J). Stays null unless it came through PROMOTE;
+     * WaitlistOfferPolicy measures the 2-hour acceptance window from
+     * here, and expireStaleWaitlistOffers() lapses the offer once it
+     * passes.
+     */
+    private LocalDateTime waitlistOfferedAt;
+
     protected Appointment() {
         // required by JPA
     }
@@ -74,6 +100,11 @@ public class Appointment {
         return slot;
     }
 
+    /** Rule I: a reschedule moves the appointment to a different slot, keeping its state. */
+    public void setSlot(Slot slot) {
+        this.slot = slot;
+    }
+
     public AppointmentStatus getStatus() {
         return status;
     }
@@ -90,6 +121,17 @@ public class Appointment {
         return feeAmount;
     }
 
+    /**
+     * Rule I: a reschedule recomputes the fee from the patient's age on the
+     * reschedule date, so a child who has since turned 18 is repriced to the
+     * adult band (and net payable with them).
+     */
+    public void reprice(FeeCategory feeCategory, BigDecimal feeAmount, BigDecimal netPayable) {
+        this.feeCategory = feeCategory;
+        this.feeAmount = feeAmount;
+        this.netPayable = netPayable;
+    }
+
     public LocalDateTime getRequestedAt() {
         return requestedAt;
     }
@@ -100,5 +142,29 @@ public class Appointment {
 
     public void setCancellationFee(BigDecimal cancellationFee) {
         this.cancellationFee = cancellationFee;
+    }
+
+    public LocalDateTime getReminderSentAt() {
+        return reminderSentAt;
+    }
+
+    public void setReminderSentAt(LocalDateTime reminderSentAt) {
+        this.reminderSentAt = reminderSentAt;
+    }
+
+    public BigDecimal getNetPayable() {
+        return netPayable;
+    }
+
+    public void setNetPayable(BigDecimal netPayable) {
+        this.netPayable = netPayable;
+    }
+
+    public LocalDateTime getWaitlistOfferedAt() {
+        return waitlistOfferedAt;
+    }
+
+    public void setWaitlistOfferedAt(LocalDateTime waitlistOfferedAt) {
+        this.waitlistOfferedAt = waitlistOfferedAt;
     }
 }

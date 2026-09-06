@@ -12,6 +12,8 @@
                th:text="${#temporals.format(appointment.slot.startTime, 'yyyy-MM-dd HH:mm')}"></span></p>
 <p>Category: <span id="confirmation-fee-category" th:text="${appointment.feeCategory}"></span></p>
 <p>Fee: <span id="confirmation-fee-amount" th:text="${appointment.feeAmount}"></span> ETB</p>
+<p>You pay after insurance:
+    <span id="confirmation-net-payable" th:text="${appointment.netPayable}"></span> ETB</p>
 
 <a id="my-appointments-link" th:href="@{/my-appointments}">My appointments</a>
 </body>

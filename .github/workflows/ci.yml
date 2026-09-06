@@ -29,6 +29,36 @@ jobs:
       - name: Build, test and check coverage gate
         run: mvn --batch-mode clean verify
 
+      - name: Mutation testing (PIT) on et.aau.clinic.core
+        run: mvn --batch-mode test-compile org.pitest:pitest-maven:mutationCoverage
+
+      - name: Publish mutation summary
+        if: always()
+        run: |
+          if [ ! -f target/pit-reports/mutations.xml ]; then
+            echo "## PIT mutation testing - et.aau.clinic.core" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "No mutation report was generated - PIT did not run." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          total=$(grep -c '<mutation ' target/pit-reports/mutations.xml || echo 0)
+          killed=$(grep -c "status='KILLED'" target/pit-reports/mutations.xml || echo 0)
+          pct=$(awk -v k="$killed" -v t="$total" 'BEGIN { printf (t>0)?100*k/t:0 }')
+          {
+            echo "## PIT mutation testing - et.aau.clinic.core"
+            echo ""
+            printf "| Mutations | Killed | Mutation score |\n"
+            printf "|---|---|---|\n"
+            printf "| %d | %d | %.1f%% |\n" "$total" "$killed" "$pct"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pit-report
+          path: backend/target/pit-reports/
+
       - name: Publish coverage summary
         if: always()
         run: |

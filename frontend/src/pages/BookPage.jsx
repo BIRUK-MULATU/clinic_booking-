@@ -8,6 +8,7 @@ export default function BookPage() {
   const navigate = useNavigate();
   const [slot, setSlot] = useState(null);
   const [error, setError] = useState("");
+  const [rejectionReason, setRejectionReason] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function BookPage() {
   async function handleConfirm() {
     setSubmitting(true);
     setError("");
+    setRejectionReason(null);
     try {
       const { ok, status, data } = await api.book(Number(slotId));
       if (status === 401) {
@@ -34,6 +36,31 @@ export default function BookPage() {
         return;
       }
       setError(REJECTION_MESSAGES[data.reason] || "This booking could not be completed.");
+      setRejectionReason(data.reason);
+    } catch {
+      setError("Could not reach the server.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Hospital-expansion Phase C: a slot that's already taken can still be joined as a
+  // waitlist entry - offered only for that specific rejection reason, not e.g. an
+  // outstanding balance or insufficient notice, which joining a waitlist wouldn't fix.
+  async function handleJoinWaitlist() {
+    setSubmitting(true);
+    setError("");
+    try {
+      const { ok, status, data } = await api.joinWaitlist(Number(slotId));
+      if (status === 401) {
+        navigate("/login");
+        return;
+      }
+      if (ok) {
+        navigate(`/confirmation/${data.id}`);
+        return;
+      }
+      setError("Could not join the waitlist.");
     } catch {
       setError("Could not reach the server.");
     } finally {
@@ -74,6 +101,17 @@ export default function BookPage() {
               >
                 {submitting ? "Booking…" : "Confirm Booking"}
               </button>
+              {rejectionReason === "SLOT_UNAVAILABLE" && (
+                <button
+                  className="btn btn-secondary"
+                  id="join-waitlist-submit"
+                  onClick={handleJoinWaitlist}
+                  disabled={submitting}
+                  style={{ width: "auto" }}
+                >
+                  Join Waitlist Instead
+                </button>
+              )}
             </div>
           </>
         )}

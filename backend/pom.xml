@@ -21,6 +21,8 @@
         <java.version>17</java.version>
         <selenium.version>4.20.0</selenium.version>
         <jacoco.version>0.8.12</jacoco.version>
+        <pitest.version>1.16.1</pitest.version>
+        <pitest.junit5.version>1.2.1</pitest.junit5.version>
     </properties>
 
     <dependencies>
@@ -164,7 +166,66 @@
                 </executions>
             </plugin>
 
+            <!--
+              Mutation testing (PIT). Not bound to a phase, so `mvn verify` is unaffected;
+              run it on demand with:  mvn test-compile org.pitest:pitest-maven:mutationCoverage
+              or via the `mutation` profile below. Scoped to et.aau.clinic.core - the same
+              business logic JaCoCo's branch gate covers - and driven by the fast *Test unit
+              tests only. Fails the run if the mutation score drops below 90%.
+            -->
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>${pitest.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>${pitest.junit5.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <targetClasses>
+                        <param>et.aau.clinic.core.*</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>et.aau.clinic.unit.*</param>
+                    </targetTests>
+                    <mutationThreshold>90</mutationThreshold>
+                    <coverageThreshold>80</coverageThreshold>
+                    <timestampedReports>false</timestampedReports>
+                    <outputFormats>
+                        <param>HTML</param>
+                        <param>XML</param>
+                    </outputFormats>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
+
+    <profiles>
+        <!-- `mvn -Pmutation verify` also runs PIT mutation testing after the normal build. -->
+        <profile>
+            <id>mutation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <executions>
+                            <execution>
+                                <id>pit-mutation-coverage</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>mutationCoverage</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

@@ -22,4 +22,10 @@ public class LoggingNotificationService implements NotificationService {
         log.info("SMS to {}: your appointment on {} is confirmed, fee {} ETB",
                 patient.getPhone(), appointment.getSlot().getStartTime(), appointment.getFeeAmount());
     }
+
+    @Override
+    public void sendReminder(Patient patient, Appointment appointment) {
+        log.info("SMS to {}: reminder - your appointment is on {} (within the next 24 hours)",
+                patient.getPhone(), appointment.getSlot().getStartTime());
+    }
 }
