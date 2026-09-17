@@ -76,6 +76,9 @@ proxied by nothing; CORS is opened for `localhost:5173` specifically in
 `WebConfig`. Same demo accounts as above, plus a one-click "fill demo
 account" shortcut on the login page.
 
+<img width="2649" height="659" alt="image" src="https://github.com/user-attachments/assets/c072fb37-c618-4f53-98e4-65435346d345" />
+
+
 ## Running the tests
 
 ```bash
