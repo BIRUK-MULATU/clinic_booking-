@@ -76,8 +76,19 @@ proxied by nothing; CORS is opened for `localhost:5173` specifically in
 `WebConfig`. Same demo accounts as above, plus a one-click "fill demo
 account" shortcut on the login page.
 
+<img width="385" height="411" alt="image" src="https://github.com/user-attachments/assets/49a8be3c-6e7d-4735-aca9-0bf34dedcda3" />
+
 <img width="2649" height="659" alt="image" src="https://github.com/user-attachments/assets/c072fb37-c618-4f53-98e4-65435346d345" />
 
+<img width="2665" height="1344" alt="image" src="https://github.com/user-attachments/assets/f92d374c-a6e3-4c86-aa82-d7b2a10de2ab" />
+
+<img width="2665" height="1344" alt="image" src="https://github.com/user-attachments/assets/347bac87-4f6e-4f13-8e18-062c6d80d9fb" />
+
+<img width="2665" height="1344" alt="image" src="https://github.com/user-attachments/assets/9492167d-d661-4ddb-9411-42fe4e137eb1" />
+
+<img width="2665" height="1344" alt="image" src="https://github.com/user-attachments/assets/4bbbe321-dfdc-4eb8-bd72-f46d2a64b41a" />
+
+<img width="2665" height="1344" alt="image" src="https://github.com/user-attachments/assets/489acb28-32b8-4f84-ab81-b209acfcc618" />
 
 ## Running the tests
 
